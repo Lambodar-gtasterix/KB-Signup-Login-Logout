@@ -1,0 +1,10 @@
+{
+  "compilerOptions": {
+    "jsx": "react"
+  },
+  "extends": "@react-native/typescript-config/tsconfig.json",
+  "include": [
+    "src",           // your source code folder
+    "src/types"      // if you're using this folder structure
+  ]
+}
