@@ -20,12 +20,13 @@ import { useAuth } from '../context/AuthContext';
 
 const ProfileScreen: React.FC = () => {
   const navigation = useNavigation();
-  const { signOut } = useAuth();   // ✅ use AuthContext
+  const { signOut } = useAuth();
   const [profileImage, setProfileImage] = useState<string | null>(null);
   const [name, setName] = useState('Pramod Patil');
   const [isEditing, setIsEditing] = useState(false);
   const [tempName, setTempName] = useState(name);
 
+  // 📸 Profile photo options
   const handlePhotoOptions = () => {
     Alert.alert('Change Profile Photo', 'Choose an option', [
       {
@@ -58,6 +59,7 @@ const ProfileScreen: React.FC = () => {
     }
   };
 
+  // ✏️ Edit name
   const handleEditToggle = () => {
     if (isEditing) {
       setName(tempName);
@@ -67,6 +69,7 @@ const ProfileScreen: React.FC = () => {
     setIsEditing(!isEditing);
   };
 
+  // 🚪 Logout
   const handleLogout = () => {
     Alert.alert('Logout', 'Are you sure you want to logout?', [
       { text: 'Cancel', style: 'cancel' },
@@ -74,7 +77,12 @@ const ProfileScreen: React.FC = () => {
         text: 'Logout',
         style: 'destructive',
         onPress: async () => {
-          await signOut();   // ✅ clears token + calls backend logout
+          try {
+            await signOut(); // AuthContext handles API + storage
+            Alert.alert('Success', 'Logout successful');
+          } catch (e) {
+            Alert.alert('Error', 'Logout failed. Please try again.');
+          }
         },
       },
     ]);
@@ -134,7 +142,7 @@ const ProfileScreen: React.FC = () => {
           </View>
         </View>
 
-        {/* ✅ Logout Button */}
+        {/* 🚪 Logout Button */}
         <TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>
           <Icon name="logout" size={18} color="#fff" style={{ marginRight: 8 }} />
           <Text style={styles.logoutText}>Logout</Text>
@@ -149,8 +157,13 @@ export default ProfileScreen;
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#f5f5f5' },
   header: {
-    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
-    paddingHorizontal: 20, paddingTop: 50, paddingBottom: 20, backgroundColor: '#fff',
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 20,
+    paddingTop: 50,
+    paddingBottom: 20,
+    backgroundColor: '#fff',
   },
   backButton: { padding: 5 },
   headerTitle: { fontSize: 18, fontWeight: '600', color: '#333' },
@@ -160,29 +173,50 @@ const styles = StyleSheet.create({
   avatarContainer: { position: 'relative', marginRight: 20 },
   avatar: { width: 80, height: 80, borderRadius: 40, backgroundColor: '#E5E5E5' },
   cameraIcon: {
-    position: 'absolute', bottom: 0, right: 0, backgroundColor: '#fff', borderRadius: 12,
-    width: 24, height: 24, justifyContent: 'center', alignItems: 'center',
-    borderWidth: 2, borderColor: '#E5E5E5',
+    position: 'absolute',
+    bottom: 0,
+    right: 0,
+    backgroundColor: '#fff',
+    borderRadius: 12,
+    width: 24,
+    height: 24,
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 2,
+    borderColor: '#E5E5E5',
   },
   profileInfo: { flex: 1 },
   nameContainer: { flexDirection: 'row', alignItems: 'center', marginBottom: 5 },
   name: { fontSize: 24, fontWeight: 'bold', color: '#333', marginRight: 8 },
   nameInput: {
-    fontSize: 24, fontWeight: 'bold', color: '#333', marginRight: 8,
-    borderBottomWidth: 1, borderBottomColor: '#007AFF', paddingVertical: 2, flex: 1,
+    fontSize: 24,
+    fontWeight: 'bold',
+    color: '#333',
+    marginRight: 8,
+    borderBottomWidth: 1,
+    borderBottomColor: '#007AFF',
+    paddingVertical: 2,
+    flex: 1,
   },
   editButton: {
-    width: 20, height: 20, borderRadius: 4, borderWidth: 1, borderColor: '#007AFF',
-    justifyContent: 'center', alignItems: 'center',
+    width: 20,
+    height: 20,
+    borderRadius: 4,
+    borderWidth: 1,
+    borderColor: '#007AFF',
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   username: { fontSize: 16, color: '#666' },
-
-  // ✅ Logout styles (matched with SigninScreen button)
   logoutButton: {
-    flexDirection: 'row', alignItems: 'center',
+    flexDirection: 'row',
+    alignItems: 'center',
     backgroundColor: '#1D6D99',
-    paddingVertical: 15, paddingHorizontal: 16,
-    borderRadius: 6, marginTop: 30, justifyContent: 'center',
+    paddingVertical: 15,
+    paddingHorizontal: 16,
+    borderRadius: 6,
+    marginTop: 30,
+    justifyContent: 'center',
   },
   logoutText: { color: '#fff', fontSize: 16, fontWeight: 'bold' },
 });

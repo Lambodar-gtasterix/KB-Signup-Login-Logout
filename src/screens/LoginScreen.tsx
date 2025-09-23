@@ -18,7 +18,7 @@ type LoginScreenNavigationProp = NativeStackNavigationProp<AuthStackParamList, '
 const { height } = Dimensions.get('window');
 
 const LoginScreen = () => {
-  const navigation = useNavigation<LoginScreenNavigationProp>();
+  const navigation = useNavigation<LoginScreenNavigationProp>(); // used only for "Signup" link
   const { signIn } = useAuth();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -30,14 +30,13 @@ const LoginScreen = () => {
       return;
     }
     try {
+      if (loading) return;
       setLoading(true);
+
       await signIn(email, password);
 
-      // ✅ Reset navigation to RootStack → Main (fixes error)
-      navigation.reset({
-        index: 0,
-        routes: [{ name: 'Main' }],
-      });
+      // ✅ Do NOT navigate here. App.tsx switches Auth → Main
+      // automatically when isSignedIn becomes true.
     } catch (e: any) {
       const msg =
         e?.response?.data?.message ||

@@ -1,4 +1,3 @@
-// src/context/AuthContext.tsx
 import React, { createContext, useContext, useEffect, useMemo, useState } from 'react';
 import { loginUser, logoutUser, LoginResponse } from '../api/auth';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -27,25 +26,34 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     roles: [],
   });
 
+  // 🔹 On app load, check if token exists in storage
   useEffect(() => {
     (async () => {
       const token = await AsyncStorage.getItem('kb_access_token');
+      const userId = await AsyncStorage.getItem('kb_user_id');
+      const rolesStr = await AsyncStorage.getItem('kb_roles');
+
       setState((s) => ({
         ...s,
         token,
+        userId: userId ? Number(userId) : null,
+        roles: rolesStr ? JSON.parse(rolesStr) : [],
         isSignedIn: !!token,
         isLoading: false,
       }));
     })();
   }, []);
 
+  // 🔹 Login
   const signIn = async (email: string, password: string) => {
     const data: LoginResponse = await loginUser({ username: email, password });
+
     await AsyncStorage.multiSet([
       ['kb_access_token', data.accessToken],
       ['kb_user_id', String(data.userId)],
       ['kb_roles', JSON.stringify(data.roles)],
     ]);
+
     setState({
       isLoading: false,
       isSignedIn: true,
@@ -55,9 +63,18 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     });
   };
 
+  // 🔹 Logout
   const signOut = async () => {
-    try { await logoutUser(); } catch {}
+    try {
+      const res = await logoutUser();
+      console.log('[LOGOUT API]', res);
+    } catch (err) {
+      console.warn('[LOGOUT API ERROR]', err);
+      // We still clear local storage even if API fails
+    }
+
     await AsyncStorage.multiRemove(['kb_access_token', 'kb_user_id', 'kb_roles']);
+
     setState({
       isLoading: false,
       isSignedIn: false,

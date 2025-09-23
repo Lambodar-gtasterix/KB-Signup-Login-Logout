@@ -8,7 +8,7 @@ export type RegisterBody = {
   lastName: string;
   mobileNumber: number | string;
   address: string;
-  role: 'BUYER' | 'SELLER' | 'USER' ;
+  role: 'BUYER' | 'SELLER' | 'USER';
 };
 
 export async function registerUser(body: RegisterBody) {
@@ -35,7 +35,13 @@ export async function loginUser(body: LoginBody): Promise<LoginResponse> {
   return res.data;
 }
 
-// ========== LOGOUT (optional) ==========
-export async function logoutUser() {
-  return api.post('/api/v1/auth/logout');
+// ========== LOGOUT ==========
+export type LogoutResponse = {
+  code: string;
+  message: string;
+};
+
+export async function logoutUser(): Promise<LogoutResponse> {
+  const res = await api.post<LogoutResponse>('/api/v1/auth/logout');
+  return res.data;
 }

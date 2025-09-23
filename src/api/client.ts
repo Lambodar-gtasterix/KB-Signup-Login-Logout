@@ -1,4 +1,3 @@
-// src/api/client.ts
 import axios from 'axios';
 import { Platform } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -8,7 +7,7 @@ const PORT = 8087;
 // Use your LAN IP for Android real device; emulator can use 10.0.2.2
 export const API_BASE_URL =
   Platform.OS === 'android'
-    ? `http://192.168.31.114:${PORT}`
+    ? `http://10.0.2.2:${PORT}`
     : `http://localhost:${PORT}`;
 
 const api = axios.create({
@@ -28,17 +27,29 @@ api.interceptors.request.use(async (config) => {
   } catch (e) {
     console.warn('Token read error:', e);
   }
-  console.log('[REQ]', config.method?.toUpperCase(), config.baseURL + config.url, config.data);
+
+  // ✅ Only log safe details
+  if (__DEV__) {
+    console.log(`[REQ] ${config.method?.toUpperCase()} ${config.baseURL}${config.url}`);
+  }
+
   return config;
 });
 
+// ✅ Hide sensitive response data
 api.interceptors.response.use(
   (res) => {
-    console.log('[RES]', res.status, res.config.url, res.data);
+    if (__DEV__) {
+      console.log(`[RES] ${res.status} ${res.config.url}`);
+    }
     return res;
   },
   (err) => {
-    console.log('[ERR]', err?.response?.status, err?.config?.url, err?.response?.data || err?.message);
+    const status = err?.response?.status;
+    const url = err?.config?.url;
+    const message = err?.response?.data?.message || err?.message;
+
+    console.warn(`[ERR] ${status} ${url}: ${message}`);
     return Promise.reject(err);
   }
 );
