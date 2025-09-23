@@ -13,15 +13,18 @@ import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useNavigation } from '@react-navigation/native';
 import { AuthStackParamList } from '../navigation/AuthStack';
 import { useAuth } from '../context/AuthContext';
+import AntDesign from 'react-native-vector-icons/AntDesign'; // 👈 added
 
 type LoginScreenNavigationProp = NativeStackNavigationProp<AuthStackParamList, 'Login'>;
 const { height } = Dimensions.get('window');
 
 const LoginScreen = () => {
-  const navigation = useNavigation<LoginScreenNavigationProp>(); // used only for "Signup" link
+  const navigation = useNavigation<LoginScreenNavigationProp>();
   const { signIn } = useAuth();
+
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false); // 👈 added
   const [loading, setLoading] = useState(false);
 
   const handleLogin = async () => {
@@ -29,14 +32,14 @@ const LoginScreen = () => {
       Alert.alert('Error', 'Please fill in all fields');
       return;
     }
+
     try {
       if (loading) return;
       setLoading(true);
 
-      await signIn(email, password);
+      await signIn(email, password); // ✅ your existing auth flow
 
-      // ✅ Do NOT navigate here. App.tsx switches Auth → Main
-      // automatically when isSignedIn becomes true.
+      // no manual navigate; your root switches stacks on sign-in
     } catch (e: any) {
       const msg =
         e?.response?.data?.message ||
@@ -54,7 +57,8 @@ const LoginScreen = () => {
         <Text style={styles.logo}>LOGO</Text>
       </View>
       <View style={styles.curvedTransition} />
-      <View className="card" style={styles.card}>
+
+      <View style={styles.card}>
         <Text style={styles.title}>Login</Text>
 
         <Text style={styles.label}>Email address</Text>
@@ -69,14 +73,22 @@ const LoginScreen = () => {
         />
 
         <Text style={styles.label}>Password</Text>
-        <TextInput
-          placeholder="Enter password"
-          placeholderTextColor="#999"
-          secureTextEntry
-          style={styles.input}
-          value={password}
-          onChangeText={setPassword}
-        />
+        <View style={styles.passwordContainer}>
+          <TextInput
+            placeholder="Enter password"
+            placeholderTextColor="#999"
+            secureTextEntry={!showPassword}
+            style={styles.passwordInput}
+            value={password}
+            onChangeText={setPassword}
+          />
+          <TouchableOpacity
+            onPress={() => setShowPassword(!showPassword)}
+            style={styles.eyeButton}
+          >
+            <AntDesign name={showPassword ? 'eyeo' : 'eye'} size={22} color="#000" />
+          </TouchableOpacity>
+        </View>
 
         <TouchableOpacity
           style={styles.button}
@@ -90,10 +102,7 @@ const LoginScreen = () => {
 
         <Text style={styles.footerText}>
           Don&apos;t have an account?{' '}
-          <Text
-            style={styles.link}
-            onPress={() => navigation.navigate('Signup')}
-          >
+          <Text style={styles.link} onPress={() => navigation.navigate('Signup')}>
             Sign up
           </Text>
         </Text>
@@ -157,6 +166,25 @@ const styles = StyleSheet.create({
     marginBottom: 12,
     color: '#000',
   },
+
+  // 👇 added for password show/hide
+  passwordContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: '#ddd',
+    borderRadius: 6,
+    marginBottom: 12,
+    paddingRight: 10,
+    backgroundColor: '#fff',
+  },
+  passwordInput: {
+    flex: 1,
+    padding: 12,
+    color: '#000',
+  },
+  eyeButton: { padding: 4 },
+
   button: {
     backgroundColor: '#1D6D99',
     padding: 15,

@@ -1,3 +1,4 @@
+// src/screens/SignupScreen.tsx
 import React, { useMemo, useState } from 'react';
 import {
   View,
@@ -17,8 +18,8 @@ import {
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useNavigation } from '@react-navigation/native';
 import { AuthStackParamList } from '../navigation/AuthStack';
-// ❌ removed: import { useAuth } from '../../App';
 import { registerUser } from '../api/auth';
+import AntDesign from 'react-native-vector-icons/AntDesign'; // 👈 added for eye icons
 
 type Role = 'BUYER' | 'SELLER' | 'USER';
 type SignupScreenNavigationProp = NativeStackNavigationProp<AuthStackParamList, 'Signup'>;
@@ -27,8 +28,6 @@ const ROLES: Role[] = ['BUYER', 'SELLER', 'USER'];
 
 const SignupScreen = () => {
   const navigation = useNavigation<SignupScreenNavigationProp>();
-  // ❌ removed: const { login } = useAuth();
-
   const { width } = useWindowDimensions();
 
   const s = useMemo(() => {
@@ -59,11 +58,32 @@ const SignupScreen = () => {
   const [showRoleSheet, setShowRoleSheet] = useState(false);
   const [submitting, setSubmitting] = useState(false);
 
+  // 👁️ show/hide toggles (added)
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+
+  // ✅ pulled validations from the reference you sent
   const handleSignup = async () => {
     if (!firstName || !lastName || !mobileNumber || !address || !email || !password || !confirmPassword) {
       Alert.alert('Error', 'Please fill in all fields');
       return;
     }
+
+    if (!/^\d{10}$/.test(mobileNumber)) {
+      Alert.alert('Error', 'Mobile number must be exactly 10 digits');
+      return;
+    }
+
+    if (!/^[\w.+\-]+@gmail\.com$/.test(email)) {
+      Alert.alert('Error', 'Email must be a valid Gmail address (ending with @gmail.com)');
+      return;
+    }
+
+    if (!/^(?=.*[!@#$%^&*(),.?":{}|<>])[A-Za-z\d!@#$%^&*(),.?":{}|<>]{8,}$/.test(password)) {
+      Alert.alert('Error', 'Password must be at least 8 characters long and contain at least 1 special symbol');
+      return;
+    }
+
     if (password !== confirmPassword) {
       Alert.alert('Error', 'Passwords do not match');
       return;
@@ -77,7 +97,7 @@ const SignupScreen = () => {
         password,
         firstName,
         lastName,
-        mobileNumber: Number(mobileNumber), // keep as-is
+        mobileNumber: Number(mobileNumber),
         address,
         role,
       };
@@ -193,34 +213,53 @@ const SignupScreen = () => {
             />
 
             <Text style={[styles.label, { fontSize: s.f12 }]}>Create password</Text>
-            <TextInput
-              placeholder="Create password"
-              placeholderTextColor="#8C8C8C"
-              secureTextEntry
-              style={[styles.input, { borderRadius: s.radius, fontSize: s.f14 }]}
-              value={password}
-              onChangeText={setPassword}
-              returnKeyType="next"
-            />
+            <View>
+              <TextInput
+                placeholder="Create password"
+                placeholderTextColor="#8C8C8C"
+                secureTextEntry={!showPassword}
+                style={[
+                  styles.input,
+                  { borderRadius: s.radius, fontSize: s.f14, paddingRight: 40 },
+                ]}
+                value={password}
+                onChangeText={setPassword}
+                returnKeyType="next"
+              />
+              <TouchableOpacity
+                style={styles.eyeIcon}
+                onPress={() => setShowPassword(!showPassword)}
+              >
+                <AntDesign name={showPassword ? 'eyeo' : 'eye'} size={22} color="#000" />
+              </TouchableOpacity>
+            </View>
+
             <Text style={[styles.label, { fontSize: s.f12 }]}>Confirm password</Text>
-            <TextInput
-              placeholder="Confirm password"
-              placeholderTextColor="#8C8C8C"
-              secureTextEntry
-              style={[styles.input, { borderRadius: s.radius, fontSize: s.f14 }]}
-              value={confirmPassword}
-              onChangeText={setConfirmPassword}
-              returnKeyType="done"
-            />
+            <View>
+              <TextInput
+                placeholder="Confirm password"
+                placeholderTextColor="#8C8C8C"
+                secureTextEntry={!showConfirmPassword}
+                style={[
+                  styles.input,
+                  { borderRadius: s.radius, fontSize: s.f14, paddingRight: 40 },
+                ]}
+                value={confirmPassword}
+                onChangeText={setConfirmPassword}
+                returnKeyType="done"
+              />
+              <TouchableOpacity
+                style={styles.eyeIcon}
+                onPress={() => setShowConfirmPassword(!showConfirmPassword)}
+              >
+                <AntDesign name={showConfirmPassword ? 'eyeo' : 'eye'} size={22} color="#000" />
+              </TouchableOpacity>
+            </View>
 
             <TouchableOpacity
               style={[
                 styles.button,
-                {
-                  borderRadius: s.radius,
-                  paddingVertical: 14,
-                  opacity: submitting ? 0.7 : 1,
-                },
+                { borderRadius: s.radius, paddingVertical: 14, opacity: submitting ? 0.7 : 1 },
               ]}
               onPress={handleSignup}
               disabled={submitting}
@@ -249,11 +288,7 @@ const SignupScreen = () => {
           <View
             style={[
               styles.sheetContainer,
-              {
-                padding: s.pad,
-                borderTopLeftRadius: s.radius + 2,
-                borderTopRightRadius: s.radius + 2,
-              },
+              { padding: s.pad, borderTopLeftRadius: s.radius + 2, borderTopRightRadius: s.radius + 2 },
             ]}
           >
             <Text style={[styles.sheetTitle, { fontSize: s.f16 }]}>Select Role</Text>
@@ -347,6 +382,16 @@ const styles = StyleSheet.create({
   buttonText: { color: '#fff', fontWeight: '700' },
   footerText: { color: '#111827', textAlign: 'center' },
   link: { color: '#0F5E87', fontWeight: '600' },
+
+  // 👁️ eye icon for password fields
+  eyeIcon: {
+    position: 'absolute',
+    right: 12,
+    top: '50%',
+    transform: [{ translateY: -11 }],
+  },
+
+  // Role sheet
   sheetBackdrop: { flex: 1, backgroundColor: 'rgba(0,0,0,0.35)' },
   sheetContainer: { backgroundColor: '#fff' },
   sheetTitle: { fontWeight: '600', color: '#0B0F19', marginBottom: 6 },
