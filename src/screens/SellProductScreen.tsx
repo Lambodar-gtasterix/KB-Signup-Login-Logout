@@ -1,14 +1,45 @@
-import React from 'react';
-import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
+import React, { useState } from 'react';
+import { View, Text, StyleSheet, Pressable } from 'react-native';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { SellProductStackParamList } from '../navigation/SellProductStack';
 
-type SellProductScreenNavigationProp = NativeStackNavigationProp<SellProductStackParamList, 'SellProduct'>;
+type SellProductScreenNavigationProp = NativeStackNavigationProp<
+  SellProductStackParamList,
+  'SellProduct'
+>;
 
 const SellProductScreen: React.FC = () => {
   const navigation = useNavigation<SellProductScreenNavigationProp>();
+  const [pressedItem, setPressedItem] = useState<string | null>(null);
+
+  const renderItem = (label: string, icon: string, onPress?: () => void) => (
+    <Pressable
+      onPressIn={() => setPressedItem(label)}
+      onPressOut={() => setPressedItem(null)}
+      onPress={onPress}
+      style={[
+        styles.item,
+        pressedItem === label && styles.selectedItem, // apply blue when pressed
+      ]}
+    >
+      <Icon
+        name={icon}
+        size={30}
+        color={pressedItem === label ? 'white' : 'black'}
+      />
+      <Text
+        style={[
+          styles.itemText,
+          pressedItem === label && styles.selectedText,
+        ]}
+      >
+        + Add {label}
+      </Text>
+    </Pressable>
+  );
+
   return (
     <View style={styles.container}>
       <Text style={styles.title}>What are you Selling?</Text>
@@ -17,30 +48,12 @@ const SellProductScreen: React.FC = () => {
         Lorem ipsum dolor sit amet consectetur ipsum
         massa turpis monti plotov. Vitae habitant duis
       </Text>
-      
+
       <View style={styles.grid}>
-        <TouchableOpacity 
-          style={[styles.item, styles.selectedItem]}
-          onPress={() => navigation.navigate('AddCarDetails')}
-        >
-          <Icon name="car" size={30} color="white" />
-          <Text style={[styles.itemText, styles.selectedText]}>+ Add Car</Text>
-        </TouchableOpacity>
-        
-        <TouchableOpacity style={styles.item}>
-          <Icon name="motorbike" size={30} color="black" />
-          <Text style={styles.itemText}>+ Add Bike</Text>
-        </TouchableOpacity>
-        
-        <TouchableOpacity style={styles.item}>
-          <Icon name="laptop" size={30} color="black" />
-          <Text style={styles.itemText}>+ Add Laptop</Text>
-        </TouchableOpacity>
-        
-        <TouchableOpacity style={styles.item}>
-          <Icon name="cellphone" size={30} color="black" />
-          <Text style={styles.itemText}>+ Add Mobile</Text>
-        </TouchableOpacity>
+        {renderItem('Car', 'car', () => navigation.navigate('AddCarDetails'))}
+        {renderItem('Bike', 'motorbike')}
+        {renderItem('Laptop', 'laptop')}
+        {renderItem('Mobile', 'cellphone', () => navigation.navigate('AddMobileDetails'))}
       </View>
     </View>
   );

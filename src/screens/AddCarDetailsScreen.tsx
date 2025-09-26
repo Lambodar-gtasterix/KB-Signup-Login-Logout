@@ -1,70 +1,154 @@
 import React, { useState } from 'react';
-import { View,Text,StyleSheet,TextInput,ScrollView,TouchableOpacity,} from 'react-native';
+import {
+  View,
+  Text,
+  StyleSheet,
+  TextInput,
+  ScrollView,
+  TouchableOpacity,
+} from 'react-native';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { SellProductStackParamList } from '../navigation/SellProductStack';
-type AddCarDetailsScreenNavigationProp = NativeStackNavigationProp<SellProductStackParamList, 'AddCarDetails'>;
+
+type AddCarDetailsScreenNavigationProp = NativeStackNavigationProp<
+  SellProductStackParamList,
+  'AddCarDetails'
+>;
+
 const AddCarDetailsScreen: React.FC = () => {
   const navigation = useNavigation<AddCarDetailsScreenNavigationProp>();
+
   const [formData, setFormData] = useState({
-    carName: '',
-    brand: '',
-    model: '',
+    // Seller-entered fields
+    area: '',
     variant: '',
-    fuelType: '',
-    transmission: '',
-    registrationYear: '',
-    kmDriven: '',
-    color: '',
-    engineCapacity: '',
-    mileage: '',
-    noOfOwners: '',
-    insuranceStatus: '',
-    price: '',
+    brand: '',
+    carInsuranceDate: '',
+    carInsuranceType: '',
     carStatus: '',
-    negotiableDiscount: '',
-    dealerId: '',
-    uploadedBy: '',
-    mainImageUrl: '',
-    carImageUrl: '',
-    rcDocumentUrl: '',
-    insuranceUrl: '',
+    city: '',
+    color: '',
+    description: '',
+    fuelType: '',
+    kmDriven: '',
+    model: '',
+    ownerSerial: '',
+    price: '',
+    registration: '',
+    title: '',
+    transmission: '',
+    year: '',
+    carType: '',
+
+    // Features
+    airbag: false,
+    ABS: false,
+    buttonStart: false,
+    sunroof: false,
+    childSafetyLocks: false,
+    acFeature: false,
+    musicFeature: false,
+    carInsurance: false,
+    powerWindowFeature: false,
+    rearParkingCameraFeature: false,
   });
-const handleInputChange = (field: string, value: string) => {
+
+  // Handle text input
+  const handleInputChange = (field: string, value: string) => {
     setFormData(prev => ({
       ...prev,
       [field]: value,
     }));
   };
-const renderFormField = (
+
+  // Handle boolean toggle
+  const handleBooleanChange = (field: string, value: boolean) => {
+    setFormData(prev => ({
+      ...prev,
+      [field]: value,
+    }));
+  };
+
+  // Text input field
+  const renderFormField = (
     placeholder: string,
     field: string,
     keyboardType: 'default' | 'numeric' = 'default'
   ) => (
-    <View style={styles.inputContainer}>
+    <View style={styles.inputContainer} key={field}>
       <TextInput
         style={styles.input}
         placeholder={placeholder}
         placeholderTextColor="#999"
-        value={formData[field as keyof typeof formData]}
+        value={formData[field as keyof typeof formData]?.toString()}
         onChangeText={(value) => handleInputChange(field, value)}
         keyboardType={keyboardType}
       />
     </View>
   );
-return (
+
+  // Yes/No boolean field
+  const renderBooleanField = (label: string, field: string) => (
+    <View style={styles.booleanContainer} key={field}>
+      <Text style={styles.booleanLabel}>{label}</Text>
+      <View style={styles.booleanButtons}>
+        <TouchableOpacity
+          style={[
+            styles.booleanButton,
+            formData[field as keyof typeof formData] === true &&
+              styles.booleanSelected,
+          ]}
+          onPress={() => handleBooleanChange(field, true)}
+        >
+          <Text
+            style={[
+              styles.booleanText,
+              formData[field as keyof typeof formData] === true &&
+                styles.booleanTextSelected,
+            ]}
+          >
+            Yes
+          </Text>
+        </TouchableOpacity>
+        <TouchableOpacity
+          style={[
+            styles.booleanButton,
+            formData[field as keyof typeof formData] === false &&
+              styles.booleanSelected,
+          ]}
+          onPress={() => handleBooleanChange(field, false)}
+        >
+          <Text
+            style={[
+              styles.booleanText,
+              formData[field as keyof typeof formData] === false &&
+                styles.booleanTextSelected,
+            ]}
+          >
+            No
+          </Text>
+        </TouchableOpacity>
+      </View>
+    </View>
+  );
+
+  return (
     <View style={styles.container}>
+      {/* Header */}
       <View style={styles.header}>
-        <TouchableOpacity 
+        <TouchableOpacity
           style={styles.backButton}
           onPress={() => navigation.goBack()}
         >
-        <Icon name="arrow-left" size={24} color="#333" />
+          <Icon name="arrow-left" size={24} color="#333" />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Fill the details</Text>
+        <Text style={styles.headerTitle}>Car Details</Text>
         <View style={styles.placeholder} />
       </View>
+
+      {/* Progress Indicator */}
       <View style={styles.progressContainer}>
         <View style={styles.progressStep}>
           <View style={[styles.progressCircle, styles.activeStep]}>
@@ -79,39 +163,54 @@ return (
         </View>
         <View style={styles.progressLine} />
         <View style={styles.progressStep}>
-       <View style={styles.progressCircle}>
+          <View style={styles.progressCircle}>
             <Text style={styles.progressText}>3</Text>
           </View>
         </View>
       </View>
-      <ScrollView style={styles.formContainer} showsVerticalScrollIndicator={false}>
-        {renderFormField('Car Name', 'carName')}
-        {renderFormField('Brand', 'brand')}
-        {renderFormField('Model', 'model')}
+
+      {/* Form */}
+      <ScrollView
+        style={styles.formContainer}
+        showsVerticalScrollIndicator={false}
+      >
+        {/* --- Input Fields --- */}
+        {renderFormField('Area', 'area')}
         {renderFormField('Variant', 'variant')}
-        {renderFormField('Fuel Type', 'fuelType')}
-        {renderFormField('Transmission', 'transmission')}
-        {renderFormField('Registration Year', 'registrationYear', 'numeric')}
-        {renderFormField('KM Driven', 'kmDriven', 'numeric')}
-        {renderFormField('Color', 'color')}
-        {renderFormField('Engine Capacity', 'engineCapacity')}
-        {renderFormField('Mileage', 'mileage', 'numeric')}
-        {renderFormField('No. of Owners', 'noOfOwners', 'numeric')}
-        {renderFormField('Insurance Status', 'insuranceStatus')}
-        {renderFormField('Price', 'price', 'numeric')}
+        {renderFormField('Brand', 'brand')}
+        {renderFormField('Insurance Date', 'carInsuranceDate')}
+        {renderFormField('Insurance Type', 'carInsuranceType')}
         {renderFormField('Car Status', 'carStatus')}
-        {renderFormField('Negotiable Discount', 'negotiableDiscount')}
-        {renderFormField('Dealer ID', 'dealerId')}
-        {renderFormField('Uploaded By', 'uploadedBy')}
-        {renderFormField('Main Image URL', 'mainImageUrl')}
-        {renderFormField('Car Image URL', 'carImageUrl')}
-        {renderFormField('RC Document URL', 'rcDocumentUrl')}
-        {renderFormField('Insurance URL', 'insuranceUrl')}
+        {renderFormField('City', 'city')}
+        {renderFormField('Color', 'color')}
+        {renderFormField('Description', 'description')}
+        {renderFormField('Fuel Type', 'fuelType')}
+        {renderFormField('KM Driven', 'kmDriven', 'numeric')}
+        {renderFormField('Model', 'model')}
+        {renderFormField('Owner Serial', 'ownerSerial', 'numeric')}
+        {renderFormField('Price', 'price', 'numeric')}
+        {renderFormField('Registration', 'registration')}
+        {renderFormField('Title', 'title')}
+        {renderFormField('Transmission', 'transmission')}
+        {renderFormField('Year', 'year', 'numeric')}
+        {renderFormField('Car Type', 'carType')}
+
+        {/* --- Boolean Fields --- */}
+        {renderBooleanField('Airbag', 'airbag')}
+        {renderBooleanField('ABS', 'ABS')}
+        {renderBooleanField('Button Start', 'buttonStart')}
+        {renderBooleanField('Sunroof', 'sunroof')}
+        {renderBooleanField('Child Safety Locks', 'childSafetyLocks')}
+        {renderBooleanField('AC Feature', 'acFeature')}
+        {renderBooleanField('Music Feature', 'musicFeature')}
+        {renderBooleanField('Car Insurance', 'carInsurance')}
+        {renderBooleanField('Power Window', 'powerWindowFeature')}
+        {renderBooleanField('Rear Parking Camera', 'rearParkingCameraFeature')}
       </ScrollView>
-      
+
       {/* Next Button */}
       <View style={styles.buttonContainer}>
-        <TouchableOpacity 
+        <TouchableOpacity
           style={styles.nextButton}
           onPress={() => navigation.navigate('SelectPhoto')}
         >
@@ -125,10 +224,9 @@ return (
 export default AddCarDetailsScreen;
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#f5f5f5',
-  },
+  container: { flex: 1, backgroundColor: '#f5f5f5' },
+
+  // Header (same as SelectPhotoScreen)
   header: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -138,17 +236,11 @@ const styles = StyleSheet.create({
     paddingBottom: 20,
     backgroundColor: '#fff',
   },
-  backButton: {
-    padding: 5,
-  },
-  headerTitle: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: '#333',
-  },
-  placeholder: {
-    width: 34,
-  },
+  backButton: { padding: 5 },
+  headerTitle: { fontSize: 18, fontWeight: '600', color: '#333' },
+  placeholder: { width: 34 },
+
+  // Progress
   progressContainer: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -157,9 +249,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#fff',
     marginBottom: 20,
   },
-  progressStep: {
-    alignItems: 'center',
-  },
+  progressStep: { alignItems: 'center' },
   progressCircle: {
     width: 30,
     height: 30,
@@ -168,27 +258,18 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
   },
-  activeStep: {
-    backgroundColor: '#4A90E2',
-  },
-  progressText: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#fff',
-  },
+  activeStep: { backgroundColor: '#4A90E2' },
+  progressText: { fontSize: 14, fontWeight: '600', color: '#fff' },
   progressLine: {
     width: 40,
     height: 2,
     backgroundColor: '#E0E0E0',
     marginHorizontal: 5,
   },
-  formContainer: {
-    flex: 1,
-    paddingHorizontal: 20,
-  },
-  inputContainer: {
-    marginBottom: 16,
-  },
+
+  // Form
+  formContainer: { flex: 1, paddingHorizontal: 20 },
+  inputContainer: { marginBottom: 16 },
   input: {
     backgroundColor: '#fff',
     borderRadius: 8,
@@ -199,6 +280,35 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: '#E0E0E0',
   },
+
+  // Boolean Fields
+  booleanContainer: {
+    marginBottom: 16,
+    backgroundColor: '#fff',
+    padding: 12,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#E0E0E0',
+  },
+  booleanLabel: {
+    fontSize: 16,
+    fontWeight: '500',
+    marginBottom: 8,
+    color: '#333',
+  },
+  booleanButtons: { flexDirection: 'row', gap: 10 },
+  booleanButton: {
+    flex: 1,
+    paddingVertical: 12,
+    borderRadius: 6,
+    backgroundColor: '#f0f0f0',
+    alignItems: 'center',
+  },
+  booleanSelected: { backgroundColor: '#4A90E2' },
+  booleanText: { fontSize: 14, color: '#333' },
+  booleanTextSelected: { color: '#fff', fontWeight: '600' },
+
+  // Next Button (same as SelectPhotoScreen)
   buttonContainer: {
     paddingHorizontal: 20,
     paddingVertical: 20,
@@ -211,9 +321,5 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  nextButtonText: {
-    color: '#fff',
-    fontSize: 16,
-    fontWeight: '600',
-  },
+  nextButtonText: { color: '#fff', fontSize: 16, fontWeight: '600' },
 });
