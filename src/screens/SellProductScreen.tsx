@@ -53,7 +53,7 @@ const SellProductScreen: React.FC = () => {
         {renderItem('Car', 'car', () => navigation.navigate('AddCarDetails'))}
         {renderItem('Bike', 'motorbike')}
         {renderItem('Laptop', 'laptop')}
-        {renderItem('Mobile', 'cellphone', () => navigation.navigate('AddMobileDetails'))}
+        {renderItem('Mobile', 'cellphone')}
       </View>
     </View>
   );
