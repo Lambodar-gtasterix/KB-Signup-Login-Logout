@@ -21,7 +21,7 @@ const SellProductScreen: React.FC = () => {
       onPress={onPress}
       style={[
         styles.item,
-        pressedItem === label && styles.selectedItem, // apply blue when pressed
+        pressedItem === label && styles.selectedItem,
       ]}
     >
       <Icon
@@ -53,7 +53,7 @@ const SellProductScreen: React.FC = () => {
         {renderItem('Car', 'car', () => navigation.navigate('AddCarDetails'))}
         {renderItem('Bike', 'motorbike')}
         {renderItem('Laptop', 'laptop')}
-        {renderItem('Mobile', 'cellphone')}
+        {renderItem('Mobile', 'cellphone', () => navigation.navigate('AddMobileDetails'))}
       </View>
     </View>
   );
@@ -103,10 +103,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginBottom: 16,
     shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
+    shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
     shadowRadius: 4,
     elevation: 3,

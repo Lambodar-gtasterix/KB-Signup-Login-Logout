@@ -1,5 +1,5 @@
-import api from '../client';  // Axios client for making API requests
-import { useAuth } from '../../context/AuthContext';  // To get userId (sellerId)
+// src/api/MobilesApi/addMobile.ts
+import api from '../client';
 
 export type AddMobileBody = {
   title: string;
@@ -11,16 +11,16 @@ export type AddMobileBody = {
   model: string;
   color: string;
   yearOfPurchase: number;
-  sellerId: number; // This will be the userId from AuthContext (sellerId)
+  sellerId: number;
 };
 
-// Function to handle adding a mobile listing
-export async function addMobile(data: AddMobileBody) {
-  try {
-    const response = await api.post('api/v1/mobiles/add', data);
-    return response.data; // Return the response data (e.g., success message or mobile listing)
-  } catch (error) {
-    console.error('Error adding mobile:', error);
-    throw error; // Rethrow or handle error
-  }
+export type AddMobileResponse = {
+  code: string;
+  message: string;
+  mobileId?: number; // ask backend to return this
+};
+
+export async function addMobile(body: AddMobileBody): Promise<AddMobileResponse> {
+  const res = await api.post<AddMobileResponse>('/api/v1/mobiles/add', body);
+  return res.data;
 }

@@ -1,12 +1,14 @@
 import React, { createContext, useContext, useEffect, useMemo, useState } from 'react';
 import { loginUser, logoutUser, LoginResponse } from '../api/auth';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import api from '../api/client';
 
 type AuthState = {
   isLoading: boolean;
   isSignedIn: boolean;
   token: string | null;
   userId: number | null;
+  sellerId: number | null;
   roles: string[];
 };
 
@@ -23,20 +25,23 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     isSignedIn: false,
     token: null,
     userId: null,
+    sellerId: null,
     roles: [],
   });
 
-  // 🔹 On app load, check if token exists in storage
+  // Restore from storage on app start
   useEffect(() => {
     (async () => {
       const token = await AsyncStorage.getItem('kb_access_token');
       const userId = await AsyncStorage.getItem('kb_user_id');
       const rolesStr = await AsyncStorage.getItem('kb_roles');
+      const sellerId = await AsyncStorage.getItem('kb_seller_id');
 
       setState((s) => ({
         ...s,
         token,
         userId: userId ? Number(userId) : null,
+        sellerId: sellerId ? Number(sellerId) : null,
         roles: rolesStr ? JSON.parse(rolesStr) : [],
         isSignedIn: !!token,
         isLoading: false,
@@ -44,14 +49,24 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     })();
   }, []);
 
-  // 🔹 Login
+  // Login
   const signIn = async (email: string, password: string) => {
     const data: LoginResponse = await loginUser({ username: email, password });
+
+    // fetch sellerId for this user
+    let sellerId: number | null = null;
+    try {
+      const sellerRes = await api.get(`/api/v1/sellers/${data.userId}`);
+      sellerId = sellerRes.data?.sellerId ?? null;
+    } catch {
+      sellerId = null;
+    }
 
     await AsyncStorage.multiSet([
       ['kb_access_token', data.accessToken],
       ['kb_user_id', String(data.userId)],
       ['kb_roles', JSON.stringify(data.roles)],
+      ['kb_seller_id', sellerId ? String(sellerId) : ''],
     ]);
 
     setState({
@@ -59,27 +74,32 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       isSignedIn: true,
       token: data.accessToken,
       userId: data.userId,
+      sellerId,
       roles: data.roles,
     });
   };
 
-  // 🔹 Logout
+  // Logout
   const signOut = async () => {
     try {
-      const res = await logoutUser();
-      console.log('[LOGOUT API]', res);
-    } catch (err) {
-      console.warn('[LOGOUT API ERROR]', err);
-      // We still clear local storage even if API fails
+      await logoutUser();
+    } catch {
+      // ignore API failure, still clear local session
     }
 
-    await AsyncStorage.multiRemove(['kb_access_token', 'kb_user_id', 'kb_roles']);
+    await AsyncStorage.multiRemove([
+      'kb_access_token',
+      'kb_user_id',
+      'kb_roles',
+      'kb_seller_id',
+    ]);
 
     setState({
       isLoading: false,
       isSignedIn: false,
       token: null,
       userId: null,
+      sellerId: null,
       roles: [],
     });
   };

@@ -2167,6 +2167,16 @@ __metadata:
   languageName: node
   linkType: hard
 
+"@react-native-picker/picker@npm:^2.11.2":
+  version: 2.11.2
+  resolution: "@react-native-picker/picker@npm:2.11.2"
+  peerDependencies:
+    react: "*"
+    react-native: "*"
+  checksum: 70aa87cf33701f106878a8aabebc611027d78d9f2fa978580e1ef5390598aabbc5aaf7b3ce04ba3966bab3330c75ec6072d3740420e9053aa4784d705b110fab
+  languageName: node
+  linkType: hard
+
 "@react-native/assets-registry@npm:0.81.4":
   version: 0.81.4
   resolution: "@react-native/assets-registry@npm:0.81.4"
@@ -3227,6 +3237,7 @@ __metadata:
     "@react-native-community/cli": 19.0.0
     "@react-native-community/cli-platform-android": 19.0.0
     "@react-native-community/cli-platform-ios": 19.0.0
+    "@react-native-picker/picker": ^2.11.2
     "@react-native/babel-preset": 0.80.1
     "@react-native/eslint-config": 0.80.1
     "@react-native/metro-config": 0.81.0
@@ -3246,6 +3257,7 @@ __metadata:
     prettier: 2.8.8
     react: 19.1.0
     react-native: ^0.81.4
+    react-native-element-dropdown: ^2.12.4
     react-native-gesture-handler: ^2.27.1
     react-native-image-picker: ^8.2.1
     react-native-linear-gradient: ^2.8.3
@@ -8478,6 +8490,18 @@ __metadata:
   version: 19.1.1
   resolution: "react-is@npm:19.1.1"
   checksum: e60ed01c27fe4d22b08f8a31f18831d144a801d08a909ca31fb1d02721b4f4cde0759148d6341f660a4d6ce54a78e22b8b39520b67e2e76254e583885868ab43
+  languageName: node
+  linkType: hard
+
+"react-native-element-dropdown@npm:^2.12.4":
+  version: 2.12.4
+  resolution: "react-native-element-dropdown@npm:2.12.4"
+  dependencies:
+    lodash: ^4.17.21
+  peerDependencies:
+    react: "*"
+    react-native: "*"
+  checksum: 4ac8962df350beb1a89d7994c4a96f06a5956f5ca7755e41b93c4d23873eedf4150903be74bbab8ebba9710da07c0c93ab29d2ff4345db797898ffef198bbadf
   languageName: node
   linkType: hard
 
