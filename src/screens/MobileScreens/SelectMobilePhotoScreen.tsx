@@ -1,50 +1,84 @@
-import React from 'react';
+import React, { useState } from 'react';
 import {
   View,
   Text,
   StyleSheet,
   TouchableOpacity,
+  ActivityIndicator,
+  Alert,
+  Dimensions,
 } from 'react-native';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
-import { useNavigation } from '@react-navigation/native';
+import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import { SellProductStackParamList } from '../navigation/SellProductStack';
+import { launchCamera, launchImageLibrary, Asset } from 'react-native-image-picker';
 
-type SelectPhotoScreenNavigationProp = NativeStackNavigationProp<SellProductStackParamList, 'SelectPhoto'>;
+ import { uploadMobileImages } from '../../api/MobilesApi/uploadImages';
+import { MobileStackParamList } from '../../navigation/MobileStack';
 
-const SelectPhotoScreen: React.FC = () => {
-  const navigation = useNavigation<SelectPhotoScreenNavigationProp>();
+type SelectPhotoNavProp = NativeStackNavigationProp<MobileStackParamList, 'SelectPhoto'>;
+type RouteProps = RouteProp<MobileStackParamList, 'SelectPhoto'>;
 
-  const handleTakePhoto = () => {
-    // Handle camera functionality
-    console.log('Take a picture pressed');
+const { width } = Dimensions.get('window'); // kept if you use it later
+
+const SelectMobilePhotoScreen: React.FC = () => {
+  const navigation = useNavigation<SelectPhotoNavProp>();
+  const route = useRoute<RouteProps>();
+  const { mobileId } = route.params;
+
+  const [uploading, setUploading] = useState(false);
+
+  const uploadFromAssets = async (assets: Asset[]) => {
+    if (!mobileId) {
+      Alert.alert('Error', 'Missing mobile id');
+      return;
+    }
+    const valid = (assets || []).filter(a => !!a?.uri);
+    if (valid.length === 0) {
+      Alert.alert('Error', 'No photo selected');
+      return;
+    }
+
+    setUploading(true);
+    try {
+      const files = valid.map((a, i) => ({
+        uri: a.uri!,
+        name: a.fileName ?? `photo_${i}.jpg`,
+        type: a.type ?? 'image/jpeg',
+      }));
+
+      const urls = await uploadMobileImages(mobileId, files);
+      Alert.alert('Success', 'Images uploaded');
+      navigation.navigate('ConfirmDetails', { mobileId, images: urls });
+    } catch (err: any) {
+      Alert.alert('Upload failed', err?.message || 'Something went wrong');
+    } finally {
+      setUploading(false);
+    }
   };
 
-  const handleUpload = () => {
-    // Handle file upload functionality
-    console.log('Upload pressed');
+  const handleTakePhoto = async () => {
+    const res = await launchCamera({ mediaType: 'photo' });
+    if (res.assets?.length) await uploadFromAssets(res.assets);
   };
 
-  const handleNext = () => {
-    // Navigate to next screen
-    navigation.navigate('ConfirmDetails');
+  const handlePickGallery = async () => {
+    const res = await launchImageLibrary({ mediaType: 'photo', selectionLimit: 10 });
+    if (res.assets?.length) await uploadFromAssets(res.assets);
   };
 
   return (
     <View style={styles.container}>
       {/* Header */}
       <View style={styles.header}>
-        <TouchableOpacity 
-          style={styles.backButton}
-          onPress={() => navigation.goBack()}
-        >
+        <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()}>
           <Icon name="arrow-left" size={24} color="#333" />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Select Photo</Text>
+        <Text style={styles.headerTitle}>Upload Photos</Text>
         <View style={styles.placeholder} />
       </View>
 
-      {/* Progress Indicator */}
+      {/* Progress */}
       <View style={styles.progressContainer}>
         <View style={styles.progressStep}>
           <View style={styles.progressCircle}>
@@ -65,47 +99,33 @@ const SelectPhotoScreen: React.FC = () => {
         </View>
       </View>
 
-      {/* Photo Options */}
-      <View style={styles.contentContainer}>
-        <View style={styles.optionsContainer}>
-          <TouchableOpacity 
-            style={styles.option}
-            onPress={handleTakePhoto}
-          >
-            <Icon name="camera" size={40} color="white" />
-            <Text style={styles.optionText}>Take a picture</Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity 
-            style={styles.option}
-            onPress={handleUpload}
-          >
-            <Icon name="folder" size={40} color="white" />
-            <Text style={styles.optionText}>Upload</Text>
-          </TouchableOpacity>
-        </View>
-      </View>
-
-      {/* Next Button */}
-      <View style={styles.buttonContainer}>
-        <TouchableOpacity 
-          style={styles.nextButton}
-          onPress={handleNext}
-        >
-          <Text style={styles.nextButtonText}>Next</Text>
+      {/* Actions only — pick = auto upload */}
+      <View style={styles.actions}>
+        <TouchableOpacity style={styles.actionBtn} onPress={handleTakePhoto} disabled={uploading}>
+          <Icon name="camera" size={24} color="#fff" />
+          <Text style={styles.actionText}>Take Photo</Text>
+        </TouchableOpacity>
+        <TouchableOpacity style={styles.actionBtn} onPress={handlePickGallery} disabled={uploading}>
+          <Icon name="folder" size={24} color="#fff" />
+          <Text style={styles.actionText}>Pick Gallery</Text>
         </TouchableOpacity>
       </View>
+
+      {/* Simple full-screen loader when uploading */}
+      {uploading && (
+        <View style={styles.loaderOverlay}>
+          <ActivityIndicator size="large" color="#fff" />
+          <Text style={styles.loaderText}>Uploading...</Text>
+        </View>
+      )}
     </View>
   );
 };
 
-export default SelectPhotoScreen;
+export default SelectMobilePhotoScreen;
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#f5f5f5',
-  },
+  container: { flex: 1, backgroundColor: '#f5f5f5' },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -115,17 +135,9 @@ const styles = StyleSheet.create({
     paddingBottom: 20,
     backgroundColor: '#fff',
   },
-  backButton: {
-    padding: 5,
-  },
-  headerTitle: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: '#333',
-  },
-  placeholder: {
-    width: 34,
-  },
+  backButton: { padding: 5 },
+  headerTitle: { fontSize: 18, fontWeight: '600', color: '#333' },
+  placeholder: { width: 34 },
   progressContainer: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -134,9 +146,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#fff',
     marginBottom: 20,
   },
-  progressStep: {
-    alignItems: 'center',
-  },
+  progressStep: { alignItems: 'center' },
   progressCircle: {
     width: 30,
     height: 30,
@@ -145,66 +155,29 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
   },
-  activeStep: {
-    backgroundColor: '#4A90E2',
-  },
-  progressText: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#fff',
-  },
-  progressLine: {
-    width: 40,
-    height: 2,
-    backgroundColor: '#E0E0E0',
-    marginHorizontal: 5,
-  },
-  contentContainer: {
-    flex: 1,
-    paddingHorizontal: 20,
-    paddingTop: 40,
-  },
-  optionsContainer: {
+  activeStep: { backgroundColor: '#4A90E2' },
+  progressText: { fontSize: 14, fontWeight: '600', color: '#fff' },
+  progressLine: { width: 40, height: 2, backgroundColor: '#E0E0E0', marginHorizontal: 5 },
+  actions: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
+    justifyContent: 'space-around',
+    marginHorizontal: 20,
+    marginTop: 16,
   },
-  option: {
-    width: '48%',
-    height: 120,
+  actionBtn: {
+    flex: 1,
     backgroundColor: '#4A90E2',
-    borderRadius: 12,
-    justifyContent: 'center',
+    borderRadius: 10,
+    padding: 16,
+    marginHorizontal: 6,
     alignItems: 'center',
-    shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
   },
-  optionText: {
-    fontSize: 16,
-    fontWeight: '500',
-    marginTop: 8,
-    color: 'white',
-  },
-  buttonContainer: {
-    paddingHorizontal: 20,
-    paddingVertical: 20,
-    backgroundColor: '#f5f5f5',
-  },
-  nextButton: {
-    backgroundColor: '#2C3E50',
-    borderRadius: 8,
-    paddingVertical: 16,
+  actionText: { color: '#fff', fontWeight: '600', marginTop: 6 },
+  loaderOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: 'rgba(0,0,0,0.35)',
     alignItems: 'center',
     justifyContent: 'center',
   },
-  nextButtonText: {
-    color: '#fff',
-    fontSize: 16,
-    fontWeight: '600',
-  },
+  loaderText: { color: '#fff', marginTop: 8, fontWeight: '600' },
 });

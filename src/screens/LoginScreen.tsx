@@ -13,7 +13,7 @@ import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useNavigation } from '@react-navigation/native';
 import { AuthStackParamList } from '../navigation/AuthStack';
 import { useAuth } from '../context/AuthContext';
-import AntDesign from 'react-native-vector-icons/AntDesign'; // 👈 added
+import AntDesign from 'react-native-vector-icons/AntDesign';
 
 type LoginScreenNavigationProp = NativeStackNavigationProp<AuthStackParamList, 'Login'>;
 const { height } = Dimensions.get('window');
@@ -24,7 +24,7 @@ const LoginScreen = () => {
 
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [showPassword, setShowPassword] = useState(false); // 👈 added
+  const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
 
   const handleLogin = async () => {
@@ -37,9 +37,8 @@ const LoginScreen = () => {
       if (loading) return;
       setLoading(true);
 
-      await signIn(email, password); // ✅ your existing auth flow
+      await signIn(email, password);
 
-      // no manual navigate; your root switches stacks on sign-in
     } catch (e: any) {
       const msg =
         e?.response?.data?.message ||

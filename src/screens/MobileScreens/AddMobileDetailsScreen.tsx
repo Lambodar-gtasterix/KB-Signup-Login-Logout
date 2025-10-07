@@ -1,13 +1,7 @@
 import React, { useState } from 'react';
 import {
-  View,
-  Text,
-  StyleSheet,
-  TextInput,
-  ScrollView,
-  TouchableOpacity,
-  ActivityIndicator,
-  Alert,
+  View, Text, StyleSheet, TextInput, ScrollView,
+  TouchableOpacity, ActivityIndicator, Alert,
 } from 'react-native';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import { Dropdown } from 'react-native-element-dropdown';
@@ -37,15 +31,15 @@ const AddMobileDetailsScreen: React.FC = () => {
   const { sellerId } = useAuth();
 
   const [formData, setFormData] = useState({
-    title: '',
-    description: '',
-    price: '',
-    negotiable: null as boolean | null,  // ✅ start as null → placeholder shows
-    condition: null as string | null,    // ✅ start as null → placeholder shows
-    brand: '',
-    model: '',
-    color: '',
-    yearOfPurchase: '',
+    title: 'iPhone 17 - Well condition dd',
+    description: 'Well maintained, minor scratches',
+    price: '30000',
+    negotiable: null as boolean | null,
+    condition: null as string | null, // "NEW" | "USED"
+    brand: 'Apple',
+    model: '16 pro ',
+    color: 'orange',
+    yearOfPurchase: '2020',
   });
 
   const [loading, setLoading] = useState(false);
@@ -80,8 +74,8 @@ const AddMobileDetailsScreen: React.FC = () => {
         title: formData.title.trim(),
         description: formData.description.trim(),
         price,
-        negotiable: formData.negotiable === true,   // ✅ ensure boolean
-        condition: formData.condition,              // ✅ "NEW" / "USED"
+        negotiable: formData.negotiable === true,
+        condition: formData.condition, // "NEW" | "USED"
         brand: formData.brand.trim(),
         model: formData.model.trim(),
         color: formData.color.trim(),
@@ -91,12 +85,15 @@ const AddMobileDetailsScreen: React.FC = () => {
 
       const res = await addMobile(payload);
 
-      if (res.code === '200') {
-        Alert.alert('Success', res.message);
-        navigation.navigate('SelectPhoto', { mobileId: res.mobileId });
-      } else {
-        Alert.alert('Failed', res.message || 'Something went wrong');
+      // Robust success check: JSON code can be "200"; require mobileId
+      const success = (res.code === '200' || res.code === '201') && typeof res.mobileId === 'number';
+      if (!success) {
+        Alert.alert('Failed', res?.message || 'Something went wrong');
+        return; // prevent fallthrough
       }
+
+      Alert.alert('Success', res.message);
+      navigation.navigate('SelectPhoto', { mobileId: res.mobileId });
     } catch (err: any) {
       Alert.alert('Error', err?.response?.data?.message || 'Failed to add mobile');
     } finally {
@@ -142,7 +139,7 @@ const AddMobileDetailsScreen: React.FC = () => {
         {renderFormField('Description', 'description')}
         {renderFormField('Price', 'price', 'numeric')}
 
-        {/* ✅ Condition dropdown */}
+        {/* Condition */}
         <View style={styles.inputContainer}>
           <Dropdown
             style={styles.dropdown}
@@ -162,7 +159,7 @@ const AddMobileDetailsScreen: React.FC = () => {
         {renderFormField('Color', 'color')}
         {renderFormField('Year of Purchase', 'yearOfPurchase', 'numeric')}
 
-        {/* ✅ Negotiable dropdown */}
+        {/* Negotiable */}
         <View style={styles.inputContainer}>
           <Dropdown
             style={styles.dropdown}
@@ -185,11 +182,7 @@ const AddMobileDetailsScreen: React.FC = () => {
           onPress={handleNext}
           disabled={loading}
         >
-          {loading ? (
-            <ActivityIndicator color="#fff" />
-          ) : (
-            <Text style={styles.nextButtonText}>Next</Text>
-          )}
+          {loading ? <ActivityIndicator color="#fff" /> : <Text style={styles.nextButtonText}>Next</Text>}
         </TouchableOpacity>
       </View>
     </View>
@@ -264,7 +257,7 @@ const styles = StyleSheet.create({
     borderColor: '#E0E0E0',
   },
   dropdown: {
-    height: 52, // ✅ same height as input
+    height: 52,
     backgroundColor: '#fff',
     borderRadius: 8,
     borderWidth: 1,

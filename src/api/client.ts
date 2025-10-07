@@ -4,10 +4,9 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const PORT = 8087;
 
-// Use your LAN IP for Android real device; emulator can use 10.0.2.2
 export const API_BASE_URL =
   Platform.OS === 'android'
-    ? `http://10.0.2.2:${PORT}`
+    ? `http://192.168.31.114:${PORT}` //192.168.1.5
     : `http://localhost:${PORT}`;
 
 const api = axios.create({
@@ -16,7 +15,6 @@ const api = axios.create({
   headers: { 'Content-Type': 'application/json' },
 });
 
-// Attach JWT automatically
 api.interceptors.request.use(async (config) => {
   try {
     const token = await AsyncStorage.getItem('kb_access_token');
@@ -28,7 +26,6 @@ api.interceptors.request.use(async (config) => {
     console.warn('Token read error:', e);
   }
 
-  // ✅ Only log safe details
   if (__DEV__) {
     console.log(`[REQ] ${config.method?.toUpperCase()} ${config.baseURL}${config.url}`);
   }
@@ -36,7 +33,6 @@ api.interceptors.request.use(async (config) => {
   return config;
 });
 
-// ✅ Hide sensitive response data
 api.interceptors.response.use(
   (res) => {
     if (__DEV__) {

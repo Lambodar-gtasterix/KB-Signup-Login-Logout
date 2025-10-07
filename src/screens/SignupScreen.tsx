@@ -1,4 +1,3 @@
-// src/screens/SignupScreen.tsx
 import React, { useMemo, useState } from 'react';
 import {
   View,
@@ -12,14 +11,14 @@ import {
   KeyboardAvoidingView,
   Platform,
   ScrollView,
-  SafeAreaView,
   useWindowDimensions,
 } from 'react-native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import { AuthStackParamList } from '../navigation/AuthStack';
 import { registerUser } from '../api/auth';
-import AntDesign from 'react-native-vector-icons/AntDesign'; // 👈 added for eye icons
+import AntDesign from 'react-native-vector-icons/AntDesign';
 
 type Role = 'BUYER' | 'SELLER' | 'USER';
 type SignupScreenNavigationProp = NativeStackNavigationProp<AuthStackParamList, 'Signup'>;
@@ -58,11 +57,9 @@ const SignupScreen = () => {
   const [showRoleSheet, setShowRoleSheet] = useState(false);
   const [submitting, setSubmitting] = useState(false);
 
-  // 👁️ show/hide toggles (added)
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
-  // ✅ pulled validations from the reference you sent
   const handleSignup = async () => {
     if (!firstName || !lastName || !mobileNumber || !address || !email || !password || !confirmPassword) {
       Alert.alert('Error', 'Please fill in all fields');

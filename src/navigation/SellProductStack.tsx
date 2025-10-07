@@ -1,18 +1,17 @@
-// src/navigation/SellProductStack.tsx
 import React from 'react';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import SellProductScreen from '../screens/SellProductScreen';
 import AddCarDetailsScreen from '../screens/AddCarDetailsScreen';
-import SelectPhotoScreen from '../screens/SelectPhotoScreen';
-import ConfirmDetailsScreen from '../screens/ConfirmDetailsScreen';
-import AddMobileDetailsScreen from '../screens/MobileScreens/AddMobileDetailsScreen';
+import SelectPhotoScreen from '../screens/SelectPhotoScreen'; // Car flow
+import ConfirmDetailsScreen from '../screens/ConfirmDetailsScreen'; // Car flow
+import MobileStack from './MobileStack'; // 👈 Mobile flow
 
 export type SellProductStackParamList = {
   SellProduct: undefined;
   AddCarDetails: undefined;
-  SelectPhoto: { mobileId?: number };
-  ConfirmDetails: undefined;
-  AddMobileDetails: undefined;
+  SelectPhoto: { mobileId?: number }; // car flow
+  ConfirmDetails: undefined; // car flow
+  MobileStack: undefined; // 👈 entry point for mobile flow
 };
 
 const Stack = createNativeStackNavigator<SellProductStackParamList>();
@@ -24,7 +23,7 @@ export default function SellProductStack() {
       <Stack.Screen name="AddCarDetails" component={AddCarDetailsScreen} />
       <Stack.Screen name="SelectPhoto" component={SelectPhotoScreen} />
       <Stack.Screen name="ConfirmDetails" component={ConfirmDetailsScreen} />
-      <Stack.Screen name="AddMobileDetails" component={AddMobileDetailsScreen} />
+      <Stack.Screen name="MobileStack" component={MobileStack} />
     </Stack.Navigator>
   );
 }

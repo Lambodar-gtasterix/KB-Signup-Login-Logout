@@ -1,4 +1,3 @@
-// src/api/auth.ts
 import api from './client';
 
 export type RegisterBody = {
@@ -16,9 +15,8 @@ export async function registerUser(body: RegisterBody) {
   return res.data;
 }
 
-// ========== LOGIN ==========
 export type LoginBody = {
-  username: string; // backend expects "username" key (email as username)
+  username: string;
   password: string;
 };
 
@@ -35,7 +33,7 @@ export async function loginUser(body: LoginBody): Promise<LoginResponse> {
   return res.data;
 }
 
-// ========== LOGOUT ==========
+
 export type LogoutResponse = {
   code: string;
   message: string;

@@ -1,4 +1,3 @@
-// src/api/MobilesApi/addMobile.ts
 import api from '../client';
 
 export type AddMobileBody = {
@@ -6,7 +5,7 @@ export type AddMobileBody = {
   description: string;
   price: number;
   negotiable: boolean;
-  condition: string;
+  condition: string;   // "NEW" | "USED"
   brand: string;
   model: string;
   color: string;
@@ -15,9 +14,9 @@ export type AddMobileBody = {
 };
 
 export type AddMobileResponse = {
-  code: string;
+  code: string;        // "200" in JSON per swagger (HTTP may be 200 or 201)
   message: string;
-  mobileId?: number; // ask backend to return this
+  mobileId?: number;   // now provided on success
 };
 
 export async function addMobile(body: AddMobileBody): Promise<AddMobileResponse> {
