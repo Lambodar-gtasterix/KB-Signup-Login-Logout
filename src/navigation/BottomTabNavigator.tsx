@@ -12,7 +12,7 @@ export type RootTabParamList = {
   'Sell Product': undefined;
   'My Ads': undefined;
    Profile: undefined;
-}; 
+};
 const Tab = createBottomTabNavigator<RootTabParamList>();
 export default function BottomTabNavigator() {
   return (

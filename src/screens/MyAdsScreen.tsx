@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import {
   View,
   Text,
@@ -18,31 +18,29 @@ type MyAdsScreenNavigationProp = NativeStackNavigationProp<
 >;
 
 const categories = [
-  {
-    id: 'car',
-    label: ' Car',
-    image: require('../assets/icons/car.png'),
-  },
-  {
-    id: 'bike',
-    label: 'Bike',
-    image: require('../assets/icons/bike.png'),
-  },
-  {
-    id: 'laptop',
-    label: ' Laptop',
-    image: require('../assets/icons/laptop.png'),
-  },
-  {
-    id: 'mobile',
-    label: ' Mobile',
-    image: require('../assets/icons/mobile.png'),
-  },
+  { id: 'car', label: ' Car', image: require('../assets/icons/car.png') },
+  { id: 'bike', label: 'Bike', image: require('../assets/icons/bike.png') },
+  { id: 'laptop', label: ' Laptop', image: require('../assets/icons/laptop.png') },
+  { id: 'mobile', label: ' Mobile', image: require('../assets/icons/mobile.png') },
 ];
 
 const MyAdsScreen: React.FC = () => {
   const navigation = useNavigation<MyAdsScreenNavigationProp>();
-  const selectedCategory = 'car'; // static; can be changed to state later
+
+  // 🟦 1. Add state for selected category
+  const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
+
+  // 🟦 2. Update state on press
+  const handlePress = (id: string) => {
+    setSelectedCategory(id);
+
+    if (id === 'mobile') {
+      navigation.navigate('MyMobilesAdsList');
+    } else {
+      // placeholder for other routes
+      console.log(`Pressed category: ${id}`);
+    }
+  };
 
   return (
     <View style={styles.container}>
@@ -70,9 +68,8 @@ const MyAdsScreen: React.FC = () => {
             <TouchableOpacity
               key={item.id}
               style={[styles.card, isSelected && styles.cardSelected]}
-              onPress={() =>
-                navigation.navigate('MyAdsListScreen', { category: item.label })
-              }
+              onPress={() => handlePress(item.id)}
+              activeOpacity={0.8} // 🟦 makes press feel responsive
             >
               <Image
                 source={item.image}
@@ -80,7 +77,7 @@ const MyAdsScreen: React.FC = () => {
                 resizeMode="contain"
               />
               <Text style={[styles.cardLabel, isSelected && { color: '#fff' }]}>
-                 {item.label}
+                {item.label}
               </Text>
             </TouchableOpacity>
           );
