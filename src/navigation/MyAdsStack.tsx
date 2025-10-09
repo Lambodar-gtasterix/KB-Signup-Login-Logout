@@ -2,30 +2,27 @@
 import React from 'react';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 
-// Screens
 import MyAdsScreen from '../screens/MyAdsScreen';
 import MyMobilesAdsListScreen from '../screens/MobileScreens/MyMobilesAdsListScreen';
-import ProductDetailsScreen from '../screens/ProductDetailsScreen';
+import ProductDetailsScreen from '../screens/MobileScreens/ProductDetailsScreen';
+import ChatScreen from '../screens/ChatScreen'; // keep if you navigate to Chat from details
 
-// --- Types (adjust if you already have central nav types) ---
 export type MyAdsStackParamList = {
   MyAdsHome: undefined;
   MyMobilesAdsList: undefined;
   ProductDetails: { mobileId: number };
+  ChatScreen: undefined; // remove if Chat is mounted elsewhere
 };
 
 const Stack = createNativeStackNavigator<MyAdsStackParamList>();
 
 export default function MyAdsStack() {
   return (
-    <Stack.Navigator
-      initialRouteName="MyAdsHome"
-      screenOptions={{ headerShown: true }}
-    >
+    <Stack.Navigator>
       <Stack.Screen
         name="MyAdsHome"
         component={MyAdsScreen}
-        options={{ title: 'My Ads' }}
+        options={{ title: 'My Ads', headerShown: false }}
       />
       <Stack.Screen
         name="MyMobilesAdsList"
@@ -35,7 +32,12 @@ export default function MyAdsStack() {
       <Stack.Screen
         name="ProductDetails"
         component={ProductDetailsScreen}
-        options={{ title: 'Product Details' }}
+        options={{ title: 'Product Details', headerBackTitle: 'Back' }}
+      />
+      <Stack.Screen
+        name="ChatScreen"
+        component={ChatScreen}
+        options={{ title: 'Chat' }}
       />
     </Stack.Navigator>
   );
