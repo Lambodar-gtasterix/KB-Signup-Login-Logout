@@ -1,3 +1,4 @@
+// UPDATE FILE: src/screens/MyMobilesAdsListScreen.tsx  (your screen file)
 import React, { useEffect, useMemo, useState } from 'react';
 import {
   View,
@@ -7,7 +8,7 @@ import {
   TouchableOpacity,
   ActivityIndicator,
   RefreshControl,
-  Image,
+  Alert,
 } from 'react-native';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import { useNavigation } from '@react-navigation/native';
@@ -15,6 +16,11 @@ import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { MyAdsStackParamList } from '../../navigation/MyAdsStack';
 import { getAllMobiles } from '../../api/MobilesApi/getAllMobiles';
 import MobileCard from '../../components/mobiles/MobileCard';
+import BottomSheet from '../../components/mobiles/BottomSheet';
+import MobileCardMenu from '../../components/mobiles/MobileCardMenu';
+
+// ✅ NEW: delete API helper
+import { deleteMobile } from '../../api/MobilesApi/deleteMobile';
 
 type NavigationProp = NativeStackNavigationProp<MyAdsStackParamList>;
 
@@ -60,6 +66,13 @@ const MyMobilesAdsListScreen: React.FC = () => {
   const [hasMore, setHasMore] = useState(true);
   const [mobiles, setMobiles] = useState<ApiMobile[]>([]);
 
+  // menu state
+  const [menuOpen, setMenuOpen] = useState(false);
+  const [selectedMobile, setSelectedMobile] = useState<ApiMobile | null>(null);
+
+  // ✅ NEW: local flag to avoid double delete taps
+  const [deleting, setDeleting] = useState(false);
+
   const fetchData = async (reset = false) => {
     if (loading && !reset) return;
     try {
@@ -100,28 +113,75 @@ const MyMobilesAdsListScreen: React.FC = () => {
     return mobiles.filter((m) => m.status && m.status !== 'ACTIVE' && m.status !== 'SOLD');
   }, [mobiles, selectedTab]);
 
+  // open/close menu
+  const openMenuFor = (m: ApiMobile) => {
+    setSelectedMobile(m);
+    setMenuOpen(true);
+  };
+  const closeMenu = () => {
+    setMenuOpen(false);
+    setSelectedMobile(null);
+  };
+
+  // ✅ NEW: Update -> navigate to your Update screen (no UI change here)
+  const handleEdit = () => {
+    if (!selectedMobile) return;
+    // If your stack already has UpdateMobile, this will work directly.
+    // Type cast avoids TS error if the route isn't added yet.
+    (navigation as any).navigate('UpdateMobile', { mobileId: selectedMobile.mobileId });
+    closeMenu();
+  };
+
+  // ✅ NEW: Delete -> confirm, call API, refresh list
+  const handleDelete = () => {
+    if (!selectedMobile || deleting) return;
+
+    Alert.alert(
+      'Delete mobile',
+      'Are you sure you want to delete this mobile?',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Delete',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              setDeleting(true);
+              await deleteMobile(selectedMobile.mobileId);
+              // Refresh using your existing loader pipeline
+              await fetchData(true);
+              Alert.alert('Deleted', 'Mobile soft-deleted');
+            } catch (e: any) {
+              Alert.alert('Failed', e?.response?.data?.message ?? 'Please try again');
+            } finally {
+              setDeleting(false);
+              closeMenu();
+            }
+          },
+        },
+      ],
+      { cancelable: true }
+    );
+  };
+
   const renderAdCard = ({ item }: { item: ApiMobile }) => {
-    const primaryImage = item.images?.[0];
-    const brandModel = [item.brand, item.model].filter(Boolean).join(' ');
-    const subtitle = [brandModel || undefined, item.yearOfPurchase?.toString()]
-      .filter(Boolean)
-      .join(' • ');
+    const primaryImage = item.images?.[0]
+      ? { uri: item.images[0] }
+      : require('../../assets/icons/Hyundai.png');
+
+    const titleText = item.title || 'Untitled Mobile';
+    const subtitleText = [item.brand, item.yearOfPurchase?.toString()].filter(Boolean).join(' • ');
 
     return (
       <MobileCard
-        image={
-          primaryImage
-            ? { uri: primaryImage }
-            : require('../../assets/icons/Hyundai.png')
-        }
+        image={primaryImage}
         priceText={INR(item.price)}
-        title={item.title || brandModel || `Mobile #${item.mobileId}`}
-        subtitle={subtitle || item.color || ''}
-        location={brandModel || 'Mobile'}
+        title={titleText}
+        subtitle={subtitleText}
+        location="Pune"
         badgeText={item.status === 'ACTIVE' ? 'Live' : (item.status ?? 'Info')}
-        onPress={() =>
-          navigation.navigate('ProductDetails', { mobileId: item.mobileId })
-        }
+        onPress={() => navigation.navigate('ProductDetails', { mobileId: item.mobileId })}
+        onMenuPress={() => openMenuFor(item)}
       />
     );
   };
@@ -147,9 +207,7 @@ const MyMobilesAdsListScreen: React.FC = () => {
               style={[styles.tab, isSelected && styles.tabSelected]}
               onPress={() => setSelectedTab(tab)}
             >
-              <Text
-                style={[styles.tabText, isSelected && styles.tabTextSelected]}
-              >
+              <Text style={[styles.tabText, isSelected && styles.tabTextSelected]}>
                 {tab} Mobiles
               </Text>
             </TouchableOpacity>
@@ -174,9 +232,7 @@ const MyMobilesAdsListScreen: React.FC = () => {
           onEndReached={() => {
             if (hasMore && !loading) fetchData(false);
           }}
-          refreshControl={
-            <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
-          }
+          refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
           ListEmptyComponent={
             !loading ? (
               <View style={{ padding: 24 }}>
@@ -186,6 +242,16 @@ const MyMobilesAdsListScreen: React.FC = () => {
           }
         />
       )}
+
+      {/* Bottom Sheet Menu */}
+      <BottomSheet visible={menuOpen} onClose={closeMenu} height={0.28}>
+        <MobileCardMenu
+          title={selectedMobile?.title}
+          statusLabel={selectedMobile?.status}
+          onEdit={handleEdit}
+          onDelete={handleDelete}
+        />
+      </BottomSheet>
     </View>
   );
 };
@@ -193,11 +259,7 @@ const MyMobilesAdsListScreen: React.FC = () => {
 export default MyMobilesAdsListScreen;
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#fff',
-    paddingTop: 50,
-  },
+  container: { flex: 1, backgroundColor: '#fff', paddingTop: 50 },
   header: {
     flexDirection: 'row',
     paddingHorizontal: 20,
@@ -205,36 +267,11 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginBottom: 10,
   },
-  headerTitle: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: '#000',
-  },
-  tabRow: {
-    flexDirection: 'row',
-    justifyContent: 'center',
-    gap: 10,
-    paddingVertical: 12,
-  },
-  tab: {
-    paddingVertical: 8,
-    paddingHorizontal: 16,
-    borderRadius: 20,
-    backgroundColor: '#F0F0F0',
-  },
-  tabSelected: {
-    backgroundColor: '#216DBD',
-  },
-  tabText: {
-    color: '#333',
-    fontSize: 13,
-  },
-  tabTextSelected: {
-    color: '#fff',
-    fontWeight: '500',
-  },
-  grid: {
-    paddingHorizontal: 10,
-    paddingBottom: 20,
-  },
+  headerTitle: { fontSize: 18, fontWeight: '600', color: '#000' },
+  tabRow: { flexDirection: 'row', justifyContent: 'center', gap: 10, paddingVertical: 12 },
+  tab: { paddingVertical: 8, paddingHorizontal: 16, borderRadius: 20, backgroundColor: '#F0F0F0' },
+  tabSelected: { backgroundColor: '#216DBD' },
+  tabText: { color: '#333', fontSize: 13 },
+  tabTextSelected: { color: '#fff', fontWeight: '500' },
+  grid: { paddingHorizontal: 10, paddingBottom: 20 },
 });

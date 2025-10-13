@@ -3257,6 +3257,7 @@ __metadata:
     prettier: 2.8.8
     react: 19.1.0
     react-native: ^0.81.4
+    react-native-actionsheet: ^2.4.2
     react-native-element-dropdown: ^2.12.4
     react-native-gesture-handler: ^2.27.1
     react-native-image-picker: ^8.2.1
@@ -8490,6 +8491,17 @@ __metadata:
   version: 19.1.1
   resolution: "react-is@npm:19.1.1"
   checksum: e60ed01c27fe4d22b08f8a31f18831d144a801d08a909ca31fb1d02721b4f4cde0759148d6341f660a4d6ce54a78e22b8b39520b67e2e76254e583885868ab43
+  languageName: node
+  linkType: hard
+
+"react-native-actionsheet@npm:^2.4.2":
+  version: 2.4.2
+  resolution: "react-native-actionsheet@npm:2.4.2"
+  peerDependencies:
+    prop-types: ">=15.4.0"
+    react: ">=15.4.0"
+    react-native: "*"
+  checksum: 97cceb5f4d484ce2dfc4aa41a0f33cb9c1aa879e567b28e681541b8c1bf2c8efdb940d8135fc8f84c4ceb987401aee36fb3894ca727af93ce10c4460dcaabe10
   languageName: node
   linkType: hard
 

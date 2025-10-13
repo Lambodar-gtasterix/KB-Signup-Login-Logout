@@ -1,5 +1,5 @@
-// src/screens/ProductDetailsScreen.tsx
-import React, { useEffect, useMemo, useState } from 'react';
+// src/screens/MobileScreens/ProductDetailsScreen.tsx
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import {
   View,
   Text,
@@ -8,6 +8,11 @@ import {
   ScrollView,
   Image,
   ActivityIndicator,
+  Share,
+  Alert,
+  NativeScrollEvent,
+  NativeSyntheticEvent,
+  Dimensions,
 } from 'react-native';
 import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
@@ -16,8 +21,14 @@ import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { MyAdsStackParamList } from '../../navigation/MyAdsStack';
 import { getMobileById, MobileDetail } from '../../api/MobilesApi/productDetails';
 
+import BottomSheet from '../../components/mobiles/BottomSheet';
+import MobileCardMenu from '../../components/mobiles/MobileCardMenu';
+import { deleteMobile } from '../../api/MobilesApi/deleteMobile';
+
 type DetailsRouteProp = RouteProp<MyAdsStackParamList, 'ProductDetails'>;
 type NavProp = NativeStackNavigationProp<MyAdsStackParamList>;
+
+const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
 const currencyINR = (n?: number) =>
   typeof n === 'number' ? `₹${Math.round(n).toLocaleString('en-IN')}` : '₹—';
@@ -32,6 +43,16 @@ const ProductDetailsScreen: React.FC = () => {
   const [data, setData] = useState<MobileDetail | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
+
+  // BottomSheet state
+  const [sheetVisible, setSheetVisible] = useState(false);
+
+  // guard to prevent double delete taps
+  const [deleting, setDeleting] = useState(false);
+
+  // image pager state
+  const [currentIndex, setCurrentIndex] = useState(0);
+  const pagerRef = useRef<ScrollView>(null);
 
   useEffect(() => {
     let mounted = true;
@@ -54,10 +75,12 @@ const ProductDetailsScreen: React.FC = () => {
     };
   }, [mobileId]);
 
-  const headerImage = useMemo(() => {
-    const url = data?.images?.[0];
-    if (url) return { uri: url };
-    return require('../../assets/icons/Hyundai.png'); // fallback
+  // compute image list (keep only valid strings)
+  const imageUris = useMemo(() => {
+    const urls = (data?.images || []).filter(
+      (u) => typeof u === 'string' && u.trim().length > 0
+    );
+    return urls;
   }, [data?.images]);
 
   const titleText =
@@ -101,35 +124,116 @@ const ProductDetailsScreen: React.FC = () => {
     );
   }
 
+  // Built-in RN Share
+  const onShare = async () => {
+    try {
+      await Share.share({
+        message: `${titleText} — check this mobile on CarYanam!`,
+      });
+    } catch {
+      /* user cancelled */
+    }
+  };
+
+  const handleUpdate = () => {
+    (navigation as any).navigate('UpdateMobile', { mobileId });
+    setSheetVisible(false);
+  };
+
+  const handleDelete = () => {
+    if (deleting) return;
+    Alert.alert(
+      'Delete mobile',
+      'Are you sure you want to delete this mobile?',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Delete',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              setDeleting(true);
+              await deleteMobile(mobileId); // DELETE /api/v1/mobiles/delete/{id}
+              setSheetVisible(false);
+              Alert.alert('Deleted', 'Mobile soft-deleted', [
+                { text: 'OK', onPress: () => navigation.goBack() },
+              ]);
+            } catch (e: any) {
+              Alert.alert('Failed', e?.response?.data?.message ?? 'Please try again');
+            } finally {
+              setDeleting(false);
+            }
+          },
+        },
+      ],
+      { cancelable: true }
+    );
+  };
+
+  // pager handler
+  const onScroll = (e: NativeSyntheticEvent<NativeScrollEvent>) => {
+    const x = e.nativeEvent.contentOffset.x;
+    const idx = Math.round(x / SCREEN_WIDTH);
+    if (idx !== currentIndex) setCurrentIndex(idx);
+  };
+
   return (
     <View style={styles.container}>
-      {/* Header with image */}
+      {/* HEADER: Swipeable image pager (height kept 300) */}
       <View style={styles.header}>
-        <TouchableOpacity
-          style={styles.backButton}
-          onPress={() => navigation.goBack()}
-        >
-          <Image
-            source={require('../../assets/icons/left-arrow.png')}
-            style={styles.iconImage}
-          />
-        </TouchableOpacity>
+        {imageUris.length > 0 ? (
+          <>
+            <ScrollView
+              ref={pagerRef}
+              horizontal
+              pagingEnabled
+              showsHorizontalScrollIndicator={false}
+              onScroll={onScroll}
+              scrollEventThrottle={16}
+              bounces
+            >
+              {imageUris.map((uri, idx) => (
+                <Image
+                  key={uri + idx}
+                  source={{ uri }}
+                  style={styles.carImage}
+                  resizeMode="cover"
+                />
+              ))}
+            </ScrollView>
 
-        <TouchableOpacity
-          style={styles.sendButton}
-          onPress={() => console.log('Share pressed')}
-        >
+            {/* dot indicators — show only if multiple images */}
+            {imageUris.length > 1 && (
+              <View style={styles.dotsBar}>
+                {imageUris.map((_, i) => (
+                  <View
+                    key={`dot-${i}`}
+                    style={[styles.dot, i === currentIndex && styles.dotActive]}
+                  />
+                ))}
+              </View>
+            )}
+          </>
+        ) : (
           <Image
-            source={require('../../assets/icons/send-icon.png')}
-            style={styles.iconImage}
+            source={require('../../assets/icons/Hyundai.png')}
+            style={styles.carImage}
+            resizeMode="cover"
           />
-        </TouchableOpacity>
+        )}
 
-        <Image source={headerImage} style={styles.carImage} resizeMode="cover" />
-        {/* Seller view: no timer here */}
+        {/* Right-side: Share + 3-dot menu */}
+        <View style={styles.headerIcons}>
+          <TouchableOpacity onPress={onShare} style={styles.iconWrap} activeOpacity={0.8}>
+            <Icon name="share-variant" size={22} color="#fff" />
+          </TouchableOpacity>
+          <TouchableOpacity onPress={() => setSheetVisible(true)} style={styles.iconWrap} activeOpacity={0.8}>
+            <Icon name="dots-vertical" size={22} color="#fff" />
+          </TouchableOpacity>
+        </View>
       </View>
 
-      {/* Tabs (keep UI consistent, even if Owner Details is basic for now) */}
+      {/* Tabs */}
       <View style={styles.toggleContainer}>
         <TouchableOpacity
           style={[styles.toggleButton, activeTab === 'Product Details' && styles.activeToggleButton]}
@@ -169,7 +273,6 @@ const ProductDetailsScreen: React.FC = () => {
             </Text>
           </View>
           <Text style={styles.carTitle}>{titleText}</Text>
-          {/* Seller view: no rating / location */}
         </View>
 
         {/* Details */}
@@ -223,21 +326,72 @@ const ProductDetailsScreen: React.FC = () => {
           <Text style={styles.bidButtonText}>Start Bidding</Text>
         </TouchableOpacity>
       </View>
+
+      {/* Bottom Sheet for Update/Delete */}
+      <BottomSheet visible={sheetVisible} onClose={() => setSheetVisible(false)} height={0.28}>
+        <MobileCardMenu
+          title={titleText}
+          statusLabel={data?.status}
+          onEdit={handleUpdate}
+          onDelete={handleDelete}
+        />
+      </BottomSheet>
     </View>
   );
 };
 
 export default ProductDetailsScreen;
 
+const DOT_SIZE = 7;
+
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#fff' },
   center: { justifyContent: 'center', alignItems: 'center' },
 
+  // header height kept same (300)
   header: { height: 300, backgroundColor: '#fff', position: 'relative' },
-  backButton: { position: 'absolute', top: 50, left: 20, zIndex: 10 },
-  sendButton: { position: 'absolute', top: 50, right: 20, zIndex: 10 },
-  iconImage: { width: 28, height: 28, tintColor: '#fff' },
-  carImage: { width: '100%', height: '100%' },
+  carImage: { width: SCREEN_WIDTH, height: '100%' },
+
+  // Right-side icon cluster over image (share + menu)
+  headerIcons: {
+    position: 'absolute',
+    top: 20,
+    right: 15,
+    flexDirection: 'row',
+    zIndex: 10,
+    gap: 14,
+  },
+  iconWrap: {
+    backgroundColor: 'rgba(0,0,0,0.4)',
+    height: 36,
+    width: 36,
+    borderRadius: 18,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+
+  // dots
+  dotsBar: {
+    position: 'absolute',
+    bottom: 12,
+    left: 0,
+    right: 0,
+    height: 16,
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
+    gap: 6,
+  },
+  dot: {
+    width: DOT_SIZE,
+    height: DOT_SIZE,
+    borderRadius: DOT_SIZE / 2,
+    backgroundColor: 'rgba(255,255,255,0.5)',
+  },
+  dotActive: {
+    backgroundColor: '#fff',
+    transform: [{ scale: 1.1 }],
+  },
 
   toggleContainer: {
     flexDirection: 'row',
@@ -267,8 +421,12 @@ const styles = StyleSheet.create({
 
   descriptionSection: { marginTop: 10 },
   descriptionText: {
-    fontSize: 14, color: '#666', backgroundColor: '#EAF3FA',
-    lineHeight: 20, padding: 10, borderRadius: 8,
+    fontSize: 14,
+    color: '#666',
+    backgroundColor: '#EAF3FA',
+    lineHeight: 20,
+    padding: 10,
+    borderRadius: 8,
   },
 
   bottomButtons: {
@@ -280,12 +438,25 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
   },
   chatButton: {
-    flex: 1, paddingVertical: 15, backgroundColor: '#143444',
-    borderRadius: 12, alignItems: 'center', marginRight: 10, bottom: 10,
-    borderWidth: 1, borderColor: '#DDE3EB',
+    flex: 1,
+    paddingVertical: 15,
+    backgroundColor: '#143444',
+    borderRadius: 12,
+    alignItems: 'center',
+    marginRight: 10,
+    bottom: 10,
+    borderWidth: 1,
+    borderColor: '#DDE3EB',
   },
   chatButtonText: { fontSize: 16, fontWeight: 'bold', color: '#FFFFFF' },
-  bidButton: { flex: 1, paddingVertical: 15, backgroundColor: '#143444', borderRadius: 12, bottom: 10, alignItems: 'center' },
+  bidButton: {
+    flex: 1,
+    paddingVertical: 15,
+    backgroundColor: '#143444',
+    borderRadius: 12,
+    bottom: 10,
+    alignItems: 'center',
+  },
   bidButtonText: { fontSize: 16, fontWeight: 'bold', color: '#FFFFFF' },
 
   retryBtn: { backgroundColor: '#216DBD', paddingHorizontal: 16, paddingVertical: 10, borderRadius: 8 },
