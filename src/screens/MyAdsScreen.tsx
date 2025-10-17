@@ -10,10 +10,10 @@ import {
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import { MyAdsStackParamList } from '../navigation/MyAdsStack';
+import { MyAdsEntryStackParamList } from '../navigation/MyAdsEntryStack';
 
 type MyAdsScreenNavigationProp = NativeStackNavigationProp<
-  MyAdsStackParamList,
+  MyAdsEntryStackParamList,
   'MyAdsScreen'
 >;
 
@@ -26,18 +26,18 @@ const categories = [
 
 const MyAdsScreen: React.FC = () => {
   const navigation = useNavigation<MyAdsScreenNavigationProp>();
-
-  // 🟦 1. Add state for selected category
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
 
-  // 🟦 2. Update state on press
   const handlePress = (id: string) => {
     setSelectedCategory(id);
 
     if (id === 'mobile') {
-      navigation.navigate('MyMobilesAdsList');
+      // ✅ Jump into the nested manage stack for mobile
+      (navigation as any).navigate('MyMobileAdsStack', {
+        screen: 'MyMobilesAdsList',
+      });
     } else {
-      // placeholder for other routes
+      // placeholder for other entities
       console.log(`Pressed category: ${id}`);
     }
   };
@@ -69,7 +69,7 @@ const MyAdsScreen: React.FC = () => {
               key={item.id}
               style={[styles.card, isSelected && styles.cardSelected]}
               onPress={() => handlePress(item.id)}
-              activeOpacity={0.8} // 🟦 makes press feel responsive
+              activeOpacity={0.8}
             >
               <Image
                 source={item.image}

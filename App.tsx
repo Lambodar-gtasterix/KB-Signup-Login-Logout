@@ -4,7 +4,7 @@ import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 
-// Screens / stacks
+// Screens
 import LoginScreen from './src/screens/LoginScreen';
 import SignupScreen from './src/screens/SignupScreen';
 import HomeScreen from './src/screens/HomeScreen';
@@ -12,9 +12,11 @@ import CarListScreen from './src/screens/CarListScreen';
 import ProductDetailsScreen from './src/screens/ProductDetailsScreen';
 import ChatScreen from './src/screens/ChatScreen';
 import LiveBiddingScreen from './src/screens/LiveBiddingScreen';
-import SellProductStack from './src/navigation/SellProductStack';
-import MyAdsStack from './src/navigation/MyAdsStack';
 import ProfileScreen from './src/screens/ProfileScreen';
+
+// ✅ New entry stacks (replace old SellProductStack/MyAdsStack usage here)
+import SellEntryStack from './src/navigation/SellEntryStack';
+import MyAdsEntryStack from './src/navigation/MyAdsEntryStack';
 
 import CustomTabBar from './src/components/CustomTabBar';
 import { AuthProvider, useAuth } from './src/context/AuthContext';
@@ -24,7 +26,7 @@ const AuthStack = createNativeStackNavigator();
 const Tab = createBottomTabNavigator();
 const HomeStackNav = createNativeStackNavigator();
 
-// ✅ Restore HomeStack so Home tab has its own stack (like your original)
+// ✅ Home tab uses its own stack (keeps your original Home → CarList → ProductDetails → Chat flow)
 function HomeStack() {
   return (
     <HomeStackNav.Navigator screenOptions={{ headerShown: false }}>
@@ -51,11 +53,16 @@ function MainTabNavigator() {
       tabBar={(props) => <CustomTabBar {...props} />}
       screenOptions={{ headerShown: false }}
     >
-      {/* 👇 Use HomeStack (not just HomeScreen) */}
+      {/* Keep your existing tab order and labels */}
       <Tab.Screen name="Home" component={HomeStack} />
       <Tab.Screen name="Live Bidding" component={LiveBiddingScreen} />
-      <Tab.Screen name="Sell Product" component={SellProductStack} />
-      <Tab.Screen name="My Ads" component={MyAdsStack} />
+
+      {/* ✅ SELL tab now points to SellEntryStack (SellProductScreen → per-entity Sell stacks) */}
+      <Tab.Screen name="Sell Product" component={SellEntryStack} />
+
+      {/* ✅ MY ADS tab now points to MyAdsEntryStack (MyAdsScreen → per-entity MyAds stacks) */}
+      <Tab.Screen name="My Ads" component={MyAdsEntryStack} />
+
       <Tab.Screen name="Profile" component={ProfileScreen} />
     </Tab.Navigator>
   );
@@ -64,7 +71,7 @@ function MainTabNavigator() {
 function AppNavigator() {
   const { isSignedIn, isLoading } = useAuth();
 
-  if (isLoading) return null; // or a splash screen
+  if (isLoading) return null; // Optional: splash component
 
   return (
     <NavigationContainer>

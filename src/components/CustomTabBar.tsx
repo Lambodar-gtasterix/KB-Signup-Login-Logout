@@ -19,19 +19,19 @@ import { BottomTabBarProps } from '@react-navigation/bottom-tabs';
 import Icon from 'react-native-vector-icons/MaterialIcons';
 
 import LinearGradient from 'react-native-linear-gradient';
- 
+
 const { width } = Dimensions.get('window');
 
 const circleSize = width * 0.16;
 
 const innerCircleSize = circleSize * 0.8;
- 
+
 export default function CustomTabBar({ state, navigation }: BottomTabBarProps) {
 
   const renderTab = (route: any, index: number) => {
 
     const isFocused = state.index === index;
- 
+
     const onPress = () => {
 
       const event = navigation.emit({
@@ -51,9 +51,9 @@ export default function CustomTabBar({ state, navigation }: BottomTabBarProps) {
       }
 
     };
- 
+
     const iconName = getIconName(route.name);
- 
+
     if (route.name === 'Sell Product') {
 
       return (
@@ -85,7 +85,7 @@ export default function CustomTabBar({ state, navigation }: BottomTabBarProps) {
       );
 
     }
- 
+
     return (
 <TouchableOpacity key={route.key} onPress={onPress} style={styles.tabButton}>
 <Icon name={iconName} size={24} color={isFocused ? '#0A84FF' : '#8E8E93'} />
@@ -98,7 +98,7 @@ export default function CustomTabBar({ state, navigation }: BottomTabBarProps) {
     );
 
   };
- 
+
   return (
 <View style={styles.container}>
 <View style={styles.tabRow}>
@@ -110,7 +110,7 @@ export default function CustomTabBar({ state, navigation }: BottomTabBarProps) {
   );
 
 }
- 
+
 function getIconName(name: string) {
 
   switch (name) {
@@ -142,7 +142,7 @@ function getIconName(name: string) {
   }
 
 }
- 
+
 function getTabLabel(name: string) {
 
   switch (name) {
@@ -174,7 +174,7 @@ function getTabLabel(name: string) {
   }
 
 }
- 
+
 const styles = StyleSheet.create({
 
   container: {
@@ -268,5 +268,3 @@ const styles = StyleSheet.create({
   },
 
 });
-
- 

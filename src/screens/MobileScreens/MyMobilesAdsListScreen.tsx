@@ -1,5 +1,4 @@
-// UPDATE FILE: src/screens/MyMobilesAdsListScreen.tsx  (your screen file)
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState, useCallback } from 'react';
 import {
   View,
   Text,
@@ -11,18 +10,18 @@ import {
   Alert,
 } from 'react-native';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
-import { useNavigation } from '@react-navigation/native';
+import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import { MyAdsStackParamList } from '../../navigation/MyAdsStack';
+
+import { MyMobileAdsStackParamList } from '../../navigation/stacks/MyMobileAdsStack';
 import { getAllMobiles } from '../../api/MobilesApi/getAllMobiles';
+import { deleteMobile } from '../../api/MobilesApi/deleteMobile';
+
 import MobileCard from '../../components/mobiles/MobileCard';
 import BottomSheet from '../../components/mobiles/BottomSheet';
 import MobileCardMenu from '../../components/mobiles/MobileCardMenu';
 
-// ✅ NEW: delete API helper
-import { deleteMobile } from '../../api/MobilesApi/deleteMobile';
-
-type NavigationProp = NativeStackNavigationProp<MyAdsStackParamList>;
+type NavigationProp = NativeStackNavigationProp<MyMobileAdsStackParamList>;
 
 type ApiMobile = {
   mobileId: number;
@@ -60,7 +59,7 @@ type Tab = typeof TABS[number];
 const MyMobilesAdsListScreen: React.FC = () => {
   const navigation = useNavigation<NavigationProp>();
   const [selectedTab, setSelectedTab] = useState<Tab>('Live');
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const [page, setPage] = useState(0);
   const [hasMore, setHasMore] = useState(true);
@@ -70,7 +69,7 @@ const MyMobilesAdsListScreen: React.FC = () => {
   const [menuOpen, setMenuOpen] = useState(false);
   const [selectedMobile, setSelectedMobile] = useState<ApiMobile | null>(null);
 
-  // ✅ NEW: local flag to avoid double delete taps
+  // local flag to avoid double delete taps
   const [deleting, setDeleting] = useState(false);
 
   const fetchData = async (reset = false) => {
@@ -101,6 +100,14 @@ const MyMobilesAdsListScreen: React.FC = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  // ✅ Refetch when screen gains focus
+  useFocusEffect(
+    useCallback(() => {
+      fetchData(true);
+      // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [])
+  );
+
   const onRefresh = async () => {
     setRefreshing(true);
     await fetchData(true);
@@ -123,16 +130,12 @@ const MyMobilesAdsListScreen: React.FC = () => {
     setSelectedMobile(null);
   };
 
-  // ✅ NEW: Update -> navigate to your Update screen (no UI change here)
   const handleEdit = () => {
     if (!selectedMobile) return;
-    // If your stack already has UpdateMobile, this will work directly.
-    // Type cast avoids TS error if the route isn't added yet.
     (navigation as any).navigate('UpdateMobile', { mobileId: selectedMobile.mobileId });
     closeMenu();
   };
 
-  // ✅ NEW: Delete -> confirm, call API, refresh list
   const handleDelete = () => {
     if (!selectedMobile || deleting) return;
 
@@ -148,7 +151,6 @@ const MyMobilesAdsListScreen: React.FC = () => {
             try {
               setDeleting(true);
               await deleteMobile(selectedMobile.mobileId);
-              // Refresh using your existing loader pipeline
               await fetchData(true);
               Alert.alert('Deleted', 'Mobile soft-deleted');
             } catch (e: any) {
