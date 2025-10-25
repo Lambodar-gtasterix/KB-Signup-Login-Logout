@@ -1,4 +1,3 @@
-// REPLACE FILE: src/components/common/BottomSheet.tsx
 import React, { useEffect, useMemo, useRef } from 'react';
 import {
   Animated,
@@ -52,7 +51,7 @@ const BottomSheet: React.FC<Props> = ({ visible, onClose, children, height }) =>
     outputRange: [sheetPxH, 0],
   });
 
-  // ⚠️ Mount Modal only when visible to avoid stale layers eating touches
+  // Mount Modal only when visible to avoid stale layers eating touches
   if (!visible) return null;
 
   return (

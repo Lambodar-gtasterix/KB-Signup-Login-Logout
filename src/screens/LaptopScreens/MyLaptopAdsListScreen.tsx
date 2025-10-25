@@ -1,3 +1,4 @@
+// src/screens/laptopscreens/MyLaptopAdsListScreen.tsx
 import React, { useEffect, useMemo, useState, useCallback } from 'react';
 import {
   View,
@@ -8,38 +9,21 @@ import {
   ActivityIndicator,
   RefreshControl,
   Alert,
+  ImageSourcePropType,
 } from 'react-native';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 
-import { MyMobileAdsStackParamList } from '../../navigation/MyMobileAdsStack';
-import { getAllMobiles } from '../../api/MobilesApi/getAllMobiles';
-import { deleteMobile } from '../../api/MobilesApi/deleteMobile';
+import { MyLaptopAdsStackParamList } from '../../navigation/MyLaptopAdsStack';
+import { getAllLaptops, LaptopItem } from '../../api/LaptopsApi/getAllLaptops';
+import { deleteLaptop } from '../../api/LaptopsApi/deleteLaptop';
 
-import MobileCard from '../../components/mobiles/MobileCard';
-import MobileCardMenu from '../../components/mobiles/MobileCardMenu';
+import ListingCard from '../../components/myads/ListingCard';
+import ListingCardMenu from '../../components/myads/ListingCardMenu';
 import BottomSheet from '../../components/myads/BottomSheet';
 
-type NavigationProp = NativeStackNavigationProp<MyMobileAdsStackParamList>;
-
-type ApiMobile = {
-  mobileId: number;
-  title: string;
-  description?: string;
-  price: number;
-  negotiable?: boolean;
-  condition?: string;
-  brand?: string;
-  model?: string;
-  color?: string;
-  yearOfPurchase?: number;
-  status?: 'ACTIVE' | 'DRAFT' | 'SOLD' | string;
-  createdAt?: string;
-  updatedAt?: string | null;
-  sellerId?: number;
-  images?: string[];
-};
+type NavigationProp = NativeStackNavigationProp<MyLaptopAdsStackParamList>;
 
 const INR = (v: number) => {
   try {
@@ -47,101 +31,86 @@ const INR = (v: number) => {
       style: 'currency',
       currency: 'INR',
       maximumFractionDigits: 0,
-    }).format(v);
+    }).format(v || 0);
   } catch {
-    return `₹${Math.round(v).toLocaleString('en-IN')}`;
+    return `₹${Math.round((v || 0)).toLocaleString('en-IN')}`;
   }
 };
 
 const TABS = ['Live', 'Upcoming', 'Completed'] as const;
 type Tab = typeof TABS[number];
 
-const MyMobilesAdsListScreen: React.FC = () => {
+const MyLaptopAdsListScreen: React.FC = () => {
   const navigation = useNavigation<NavigationProp>();
+
   const [selectedTab, setSelectedTab] = useState<Tab>('Live');
+  const [laptops, setLaptops] = useState<LaptopItem[]>([]);
   const [loading, setLoading] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
-  const [page, setPage] = useState(0);
-  const [hasMore, setHasMore] = useState(true);
-  const [mobiles, setMobiles] = useState<ApiMobile[]>([]);
 
-  // menu state
+  // menu
   const [menuOpen, setMenuOpen] = useState(false);
-  const [selectedMobile, setSelectedMobile] = useState<ApiMobile | null>(null);
-
-  // local flag to avoid double delete taps
+  const [selectedLaptop, setSelectedLaptop] = useState<LaptopItem | null>(null);
   const [deleting, setDeleting] = useState(false);
 
-  const fetchData = async (reset = false) => {
-    if (loading && !reset) return;
+  const fetchData = async () => {
+    if (loading) return;
+    setLoading(true);
     try {
-      if (reset) {
-        setPage(0);
-        setHasMore(true);
-      }
-      setLoading(true);
-      const res = await getAllMobiles({
-        page: reset ? 0 : page,
-        size: 20,
-        sort: 'createdAt,DESC',
-      });
-      setHasMore(res?.last === false);
-      setPage((p) => (reset ? 1 : p + 1));
-      setMobiles((prev) => (reset ? res.content : [...prev, ...res.content]));
+      const data = await getAllLaptops(); // plain array
+      setLaptops(data);
     } catch (e) {
-      console.warn('getAllMobiles error:', e);
+      console.warn('getAllLaptops error:', e);
     } finally {
       setLoading(false);
     }
   };
 
   useEffect(() => {
-    fetchData(true);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    fetchData();
   }, []);
 
-  // ✅ Refetch when screen gains focus
+  // refetch when screen regains focus (after update/delete)
   useFocusEffect(
     useCallback(() => {
-      fetchData(true);
-      // eslint-disable-next-line react-hooks/exhaustive-deps
+      fetchData();
     }, [])
   );
 
   const onRefresh = async () => {
     setRefreshing(true);
-    await fetchData(true);
+    await fetchData();
     setRefreshing(false);
   };
 
   const filtered = useMemo(() => {
-    if (selectedTab === 'Live') return mobiles.filter((m) => m.status === 'ACTIVE');
-    if (selectedTab === 'Completed') return mobiles.filter((m) => m.status === 'SOLD');
-    return mobiles.filter((m) => m.status && m.status !== 'ACTIVE' && m.status !== 'SOLD');
-  }, [mobiles, selectedTab]);
+    if (selectedTab === 'Live') return laptops.filter((l) => l.status === 'ACTIVE');
+    if (selectedTab === 'Completed') return laptops.filter((l) => l.status === 'SOLD');
+    // Upcoming = anything not ACTIVE/SOLD (adjust as your business rules)
+    return laptops.filter((l) => l.status && l.status !== 'ACTIVE' && l.status !== 'SOLD');
+  }, [laptops, selectedTab]);
 
-  // open/close menu
-  const openMenuFor = (m: ApiMobile) => {
-    setSelectedMobile(m);
+  const openMenuFor = (l: LaptopItem) => {
+    setSelectedLaptop(l);
     setMenuOpen(true);
   };
   const closeMenu = () => {
     setMenuOpen(false);
-    setSelectedMobile(null);
+    setSelectedLaptop(null);
   };
 
   const handleEdit = () => {
-    if (!selectedMobile) return;
-    (navigation as any).navigate('UpdateMobile', { mobileId: selectedMobile.mobileId });
+    if (!selectedLaptop) return;
+    (navigation as any).navigate('UpdateLaptop', { laptopId: selectedLaptop.id }); // backend uses "id"
     closeMenu();
   };
 
   const handleDelete = () => {
-    if (!selectedMobile || deleting) return;
+    if (!selectedLaptop || deleting) return;
 
     Alert.alert(
-      'Delete mobile',
-      'Are you sure you want to delete this mobile?',
+      'Delete laptop',
+      'Are you sure you want to delete this laptop?',
       [
         { text: 'Cancel', style: 'cancel' },
         {
@@ -150,9 +119,9 @@ const MyMobilesAdsListScreen: React.FC = () => {
           onPress: async () => {
             try {
               setDeleting(true);
-              await deleteMobile(selectedMobile.mobileId);
-              await fetchData(true);
-              Alert.alert('Deleted', 'Mobile soft-deleted');
+              await deleteLaptop(selectedLaptop.id); // pass the numeric id
+              await fetchData();
+              Alert.alert('Deleted', 'Laptop soft-deleted');
             } catch (e: any) {
               Alert.alert('Failed', e?.response?.data?.message ?? 'Please try again');
             } finally {
@@ -166,23 +135,26 @@ const MyMobilesAdsListScreen: React.FC = () => {
     );
   };
 
-  const renderAdCard = ({ item }: { item: ApiMobile }) => {
-    const primaryImage = item.images?.[0]
-      ? { uri: item.images[0] }
-      : require('../../assets/icons/Hyundai.png');
+  const resolveImage = (item: LaptopItem): ImageSourcePropType => {
+    const url = item.laptopPhotos?.[0]?.photo_link ?? '';
+    if (url) return { uri: url };
+    return require('../../assets/icons/Hyundai.png'); // fallback placeholder
+  };
 
-    const titleText = item.title || 'Untitled Mobile';
-    const subtitleText = [item.brand, item.yearOfPurchase?.toString()].filter(Boolean).join(' • ');
+  const renderCard = ({ item }: { item: LaptopItem }) => {
+    const titleText =
+      [item.brand, item.model].filter(Boolean).join(' ') || `Laptop #${item.id}`;
+    const subtitleText = [item.brand, item.processor].filter(Boolean).join(' • ');
 
     return (
-      <MobileCard
-        image={primaryImage}
-        priceText={INR(item.price)}
+      <ListingCard
+        image={resolveImage(item)}
+        priceText={INR(item.price || 0)}
         title={titleText}
         subtitle={subtitleText}
         location="Pune"
-        badgeText={item.status === 'ACTIVE' ? 'Live' : (item.status ?? 'Info')}
-        onPress={() => navigation.navigate('ProductDetails', { mobileId: item.mobileId })}
+        badgeText={item.status === 'ACTIVE' ? 'Live' : (item.status as string) || 'Info'}
+        onPress={() => navigation.navigate('LaptopDetails', { laptopId: item.id })}
         onMenuPress={() => openMenuFor(item)}
       />
     );
@@ -190,12 +162,12 @@ const MyMobilesAdsListScreen: React.FC = () => {
 
   return (
     <View style={styles.container}>
-      {/* Header */}
+      {/* Header (kept consistent) */}
       <View style={styles.header}>
         <TouchableOpacity onPress={() => navigation.goBack()}>
           <Icon name="arrow-left" size={24} color="#000" />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>My Ads</Text>
+        <Text style={styles.headerTitle}>My Laptop Ads</Text>
         <View style={{ width: 24 }} />
       </View>
 
@@ -210,46 +182,46 @@ const MyMobilesAdsListScreen: React.FC = () => {
               onPress={() => setSelectedTab(tab)}
             >
               <Text style={[styles.tabText, isSelected && styles.tabTextSelected]}>
-                {tab} Mobiles
+                {tab} Laptops
               </Text>
             </TouchableOpacity>
           );
         })}
       </View>
 
-      {/* Ads Grid */}
-      {loading && mobiles.length === 0 ? (
+      {/* Grid */}
+      {loading && laptops.length === 0 ? (
         <View style={{ paddingTop: 40 }}>
           <ActivityIndicator />
         </View>
       ) : (
         <FlatList
           data={filtered}
-          keyExtractor={(item) => String(item.mobileId)}
-          renderItem={renderAdCard}
+          keyExtractor={(item) => String(item.id)}   // backend id
+          renderItem={renderCard}
           numColumns={2}
           contentContainerStyle={styles.grid}
           showsVerticalScrollIndicator={false}
-          onEndReachedThreshold={0.3}
-          onEndReached={() => {
-            if (hasMore && !loading) fetchData(false);
-          }}
           refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
           ListEmptyComponent={
             !loading ? (
               <View style={{ padding: 24 }}>
-                <Text>No mobiles found.</Text>
+                <Text>No laptops found.</Text>
               </View>
             ) : null
           }
         />
       )}
 
-      {/* Bottom Sheet Menu */}
+      {/* 3-dot BottomSheet */}
       <BottomSheet visible={menuOpen} onClose={closeMenu} height={0.28}>
-        <MobileCardMenu
-          title={selectedMobile?.title}
-          statusLabel={selectedMobile?.status}
+        <ListingCardMenu
+          title={
+            selectedLaptop
+              ? [selectedLaptop.brand, selectedLaptop.model].filter(Boolean).join(' ')
+              : undefined
+          }
+          statusLabel={selectedLaptop?.status as string | undefined}
           onEdit={handleEdit}
           onDelete={handleDelete}
         />
@@ -258,7 +230,7 @@ const MyMobilesAdsListScreen: React.FC = () => {
   );
 };
 
-export default MyMobilesAdsListScreen;
+export default MyLaptopAdsListScreen;
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#fff', paddingTop: 50 },

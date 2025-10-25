@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import {
   View,
   Text,
@@ -7,17 +7,24 @@ import {
   ActivityIndicator,
   Alert,
   Dimensions,
+  InteractionManager,
 } from 'react-native';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { launchCamera, launchImageLibrary, Asset } from 'react-native-image-picker';
 
- import { uploadMobileImages } from '../../api/MobilesApi/uploadImages';
+import { uploadMobileImages } from '../../api/MobilesApi/uploadImages';
 import { MobileStackParamList } from '../../navigation/MobileStack';
 
 type SelectPhotoNavProp = NativeStackNavigationProp<MobileStackParamList, 'SelectPhoto'>;
 type RouteProps = RouteProp<MobileStackParamList, 'SelectPhoto'>;
+
+type UploadProgress = {
+  total: number;
+  uploaded: number;
+  current: string;
+};
 
 const { width } = Dimensions.get('window'); // kept if you use it later
 
@@ -27,8 +34,28 @@ const SelectMobilePhotoScreen: React.FC = () => {
   const { mobileId } = route.params;
 
   const [uploading, setUploading] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState<UploadProgress | null>(null);
+
+  // Unmount safety: avoid setting state if user navigates away mid-upload
+  const isMounted = useRef(true);
+  useEffect(() => {
+    isMounted.current = true;
+    return () => {
+      isMounted.current = false;
+    };
+  }, []);
+
+  const safeSetUploading = (v: boolean) => {
+    if (isMounted.current) setUploading(v);
+  };
+  const safeSetUploadProgress = (updater: UploadProgress | null | ((prev: UploadProgress | null) => UploadProgress | null)) => {
+    if (isMounted.current) setUploadProgress(updater as any);
+  };
 
   const uploadFromAssets = async (assets: Asset[]) => {
+    // Re-entry guard to prevent double-trigger while overlay is up
+    if (uploading) return;
+
     if (!mobileId) {
       Alert.alert('Error', 'Missing mobile id');
       return;
@@ -39,39 +66,154 @@ const SelectMobilePhotoScreen: React.FC = () => {
       return;
     }
 
-    setUploading(true);
+    safeSetUploading(true);
+    safeSetUploadProgress({ total: valid.length, uploaded: 0, current: 'Starting...' });
+
     try {
+      // ✅ Let the overlay paint BEFORE heavy work starts
+      await new Promise<void>(resolve => {
+        InteractionManager.runAfterInteractions(() => resolve());
+        // Alternative options if ever needed:
+        // requestAnimationFrame(() => resolve());
+        // setTimeout(resolve, 0);
+      });
+
       const files = valid.map((a, i) => ({
         uri: a.uri!,
-        name: a.fileName ?? `photo_${i}.jpg`,
+        name: a.fileName ?? `mobile_${Date.now()}_${i}.jpg`,
         type: a.type ?? 'image/jpeg',
       }));
 
-      const urls = await uploadMobileImages(mobileId, files);
-      Alert.alert('Success', 'Images uploaded');
-      navigation.navigate('ConfirmDetails', { mobileId, images: urls });
+      const uploadedUrls: string[] = [];
+      const seenUrls = new Set<string>();
+      const failedFiles: { name: string; error: string }[] = [];
+
+      for (let i = 0; i < files.length; i++) {
+        const file = files[i];
+
+        safeSetUploadProgress({
+          total: files.length,
+          uploaded: i,
+          current: file.name || `Image ${i + 1}`,
+        });
+
+        try {
+          // 🔁 keep your original per-file API logic unchanged
+          const urls = await uploadMobileImages(mobileId, [file]);
+
+          if (!Array.isArray(urls)) {
+            throw new Error('Invalid response from server');
+          }
+
+          urls.forEach(url => {
+            if (typeof url === 'string' && url.trim().length && !seenUrls.has(url)) {
+              seenUrls.add(url);
+              uploadedUrls.push(url);
+            }
+          });
+        } catch (error: any) {
+          console.error('[MOBILE UPLOAD ERROR]', error?.message || error);
+          failedFiles.push({
+            name: file.name || `Image ${i + 1}`,
+            error: error?.message || 'Upload failed',
+          });
+        }
+      }
+
+      safeSetUploadProgress({
+        total: files.length,
+        uploaded: files.length,
+        current: 'Complete',
+      });
+
+      if (uploadedUrls.length === 0) {
+        const firstError = failedFiles[0]?.error || 'All uploads failed';
+        throw new Error(firstError);
+      }
+
+      const successCount = uploadedUrls.length;
+      const failCount = failedFiles.length;
+
+      if (failCount > 0) {
+        Alert.alert(
+          'Partial Success',
+          `${successCount} of ${files.length} images uploaded successfully.\n${failCount} failed.`,
+          [
+            {
+              text: 'Continue Anyway',
+              onPress: () => navigation.navigate('ConfirmDetails', { mobileId, images: uploadedUrls }),
+            },
+            { text: 'Retry Failed', style: 'cancel' },
+          ]
+        );
+      } else {
+        Alert.alert('Success', `All ${successCount} images uploaded successfully!`);
+        navigation.navigate('ConfirmDetails', { mobileId, images: uploadedUrls });
+      }
     } catch (err: any) {
-      Alert.alert('Upload failed', err?.message || 'Something went wrong');
+      console.error('[UPLOAD FAILED]', err?.response?.data || err?.message || err);
+      Alert.alert(
+        'Upload Failed',
+        err?.message || 'Network error. Please try again.',
+        [
+          { text: 'Retry', onPress: () => uploadFromAssets(assets) },
+          { text: 'Cancel', style: 'cancel' },
+        ]
+      );
     } finally {
-      setUploading(false);
+      safeSetUploading(false);
+      safeSetUploadProgress(null);
     }
   };
 
   const handleTakePhoto = async () => {
-    const res = await launchCamera({ mediaType: 'photo' });
-    if (res.assets?.length) await uploadFromAssets(res.assets);
+    if (uploading) return; // guard
+    try {
+      const res = await launchCamera({
+        mediaType: 'photo',
+        quality: 0.8,
+        maxWidth: 1920,
+        maxHeight: 1920,
+      });
+
+      if (res.assets?.length) {
+        await uploadFromAssets(res.assets);
+      }
+    } catch (error) {
+      console.error('[CAMERA ERROR]', error);
+      Alert.alert('Camera Error', 'Failed to open camera');
+    }
   };
 
   const handlePickGallery = async () => {
-    const res = await launchImageLibrary({ mediaType: 'photo', selectionLimit: 10 });
-    if (res.assets?.length) await uploadFromAssets(res.assets);
+    if (uploading) return; // guard
+    try {
+      const res = await launchImageLibrary({
+        mediaType: 'photo',
+        selectionLimit: 10,
+        quality: 0.8,
+        maxWidth: 1920,
+        maxHeight: 1920,
+      });
+
+      if (res.assets?.length) {
+        await uploadFromAssets(res.assets);
+      }
+    } catch (error) {
+      console.error('[GALLERY ERROR]', error);
+      Alert.alert('Gallery Error', 'Failed to open gallery');
+    }
   };
 
   return (
     <View style={styles.container}>
       {/* Header */}
       <View style={styles.header}>
-        <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()}>
+        <TouchableOpacity
+          style={styles.backButton}
+          onPress={() => navigation.goBack()}
+          disabled={uploading}
+        >
           <Icon name="arrow-left" size={24} color="#333" />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Upload Photos</Text>
@@ -111,11 +253,34 @@ const SelectMobilePhotoScreen: React.FC = () => {
         </TouchableOpacity>
       </View>
 
-      {/* Simple full-screen loader when uploading */}
-      {uploading && (
+      {/* Upload Progress Overlay */}
+      {uploading && uploadProgress && (
         <View style={styles.loaderOverlay}>
-          <ActivityIndicator size="large" color="#fff" />
-          <Text style={styles.loaderText}>Uploading...</Text>
+          <View style={styles.progressCard}>
+            <ActivityIndicator size="large" color="#4A90E2" />
+            <Text style={styles.progressTitle}>Uploading Images</Text>
+            <Text style={styles.progressDetail}>
+              {uploadProgress.uploaded} of {uploadProgress.total}
+            </Text>
+            <Text style={styles.progressCurrent}>{uploadProgress.current}</Text>
+
+            <View style={styles.progressBarContainer}>
+              <View
+                style={[
+                  styles.progressBarFill,
+                  {
+                    width: `${
+                      uploadProgress.total > 0
+                        ? (uploadProgress.uploaded / uploadProgress.total) * 100
+                        : 0
+                    }%`,
+                  },
+                ]}
+              />
+            </View>
+
+            <Text style={styles.progressHint}>Please wait...</Text>
+          </View>
         </View>
       )}
     </View>
@@ -175,9 +340,53 @@ const styles = StyleSheet.create({
   actionText: { color: '#fff', fontWeight: '600', marginTop: 6 },
   loaderOverlay: {
     ...StyleSheet.absoluteFillObject,
-    backgroundColor: 'rgba(0,0,0,0.35)',
+    backgroundColor: 'rgba(0,0,0,0.7)',
     alignItems: 'center',
     justifyContent: 'center',
+    padding: 20,
   },
-  loaderText: { color: '#fff', marginTop: 8, fontWeight: '600' },
+  progressCard: {
+    backgroundColor: '#fff',
+    borderRadius: 16,
+    padding: 24,
+    alignItems: 'center',
+    width: '90%',
+    maxWidth: 320,
+  },
+  progressTitle: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: '#333',
+    marginTop: 16,
+  },
+  progressDetail: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#4A90E2',
+    marginTop: 8,
+  },
+  progressCurrent: {
+    fontSize: 13,
+    color: '#666',
+    marginTop: 4,
+    textAlign: 'center',
+  },
+  progressBarContainer: {
+    width: '100%',
+    height: 8,
+    backgroundColor: '#E0E0E0',
+    borderRadius: 4,
+    marginTop: 16,
+    overflow: 'hidden',
+  },
+  progressBarFill: {
+    height: '100%',
+    backgroundColor: '#4A90E2',
+    borderRadius: 4,
+  },
+  progressHint: {
+    fontSize: 12,
+    color: '#999',
+    marginTop: 12,
+  },
 });

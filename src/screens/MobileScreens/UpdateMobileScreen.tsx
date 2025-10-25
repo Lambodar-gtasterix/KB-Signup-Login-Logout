@@ -142,26 +142,7 @@ const UpdateMobileScreen: React.FC = () => {
         <View style={styles.placeholder} />
       </View>
 
-      {/* Progress (copied visuals) */}
-      <View style={styles.progressContainer}>
-        <View style={styles.progressStep}>
-          <View style={[styles.progressCircle, styles.activeStep]}>
-            <Text style={styles.progressText}>1</Text>
-          </View>
-        </View>
-        <View style={styles.progressLine} />
-        <View style={styles.progressStep}>
-          <View style={styles.progressCircle}>
-            <Text style={styles.progressText}>2</Text>
-          </View>
-        </View>
-        <View style={styles.progressLine} />
-        <View style={styles.progressStep}>
-          <View style={styles.progressCircle}>
-            <Text style={styles.progressText}>3</Text>
-          </View>
-        </View>
-      </View>
+      {/* ⬇️ Removed the 1-2-3 progress indicator block here */}
 
       {/* Form (same layout as Add) */}
       <ScrollView style={styles.formContainer} showsVerticalScrollIndicator={false}>
@@ -257,7 +238,7 @@ const styles = StyleSheet.create({
   headerTitle: { fontSize: 18, fontWeight: '600', color: '#333' },
   placeholder: { width: 34 },
 
-  // Progress (same visuals)
+  // (progress styles left as-is; unused is fine)
   progressContainer: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -280,7 +261,7 @@ const styles = StyleSheet.create({
   progressLine: { width: 40, height: 2, backgroundColor: '#E0E0E0', marginHorizontal: 5 },
 
   // Form (same visuals)
-  formContainer: { flex: 1, paddingHorizontal: 20 },
+  formContainer: { flex: 1, paddingHorizontal: 20, marginTop:20},
   inputContainer: { marginBottom: 16 },
   input: {
     backgroundColor: '#fff',

@@ -15,21 +15,18 @@ const Stack = createNativeStackNavigator<MyMobileAdsStackParamList>();
 
 export default function MyMobileAdsStack() {
   return (
-    <Stack.Navigator>
+    <Stack.Navigator screenOptions={{ headerShown: false }}>
       <Stack.Screen
         name="MyMobilesAdsList"
         component={MyMobilesAdsListScreen}
-        options={{ title: 'My Mobile Ads', headerShown: false }}
       />
       <Stack.Screen
         name="ProductDetails"
         component={ProductDetailsScreen}
-        options={{ title: 'Product Details', headerBackTitle: 'Back' }}
       />
       <Stack.Screen
         name="UpdateMobile"
         component={UpdateMobileScreen}
-        options={{ title: 'Update Mobile', headerShown: false }}
       />
     </Stack.Navigator>
   );

@@ -36,6 +36,12 @@ const MyAdsScreen: React.FC = () => {
       (navigation as any).navigate('MyMobileAdsStack', {
         screen: 'MyMobilesAdsList',
       });
+      return;
+    } else if (id === 'laptop') {
+      (navigation as any).navigate('MyLaptopAdsStack', {
+        screen: 'MyLaptopAdsList',
+      });
+      return;
     } else {
       // placeholder for other entities
       console.log(`Pressed category: ${id}`);

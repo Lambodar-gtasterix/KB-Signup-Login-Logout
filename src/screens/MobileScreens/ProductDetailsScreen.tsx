@@ -21,7 +21,7 @@ import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { MyAdsStackParamList } from '../../navigation/MyAdsStack';
 import { getMobileById, MobileDetail } from '../../api/MobilesApi/productDetails';
 
-import BottomSheet from '../../components/mobiles/BottomSheet';
+import BottomSheet from '../../components/myads/BottomSheet';
 import MobileCardMenu from '../../components/mobiles/MobileCardMenu';
 import { deleteMobile } from '../../api/MobilesApi/deleteMobile';
 
