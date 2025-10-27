@@ -60,7 +60,7 @@ const PORT = 8087;
 
 export const API_BASE_URL =
   Platform.OS === 'android'
-    ? `http://192.168.31.114:${PORT}` // Android emulator // //10.0.2.2
+    ? `http://10.0.2.2:${PORT}` // Android emulator // //10.0.2.2
     : `http://localhost:${PORT}`; // iOS simulator
 
 const api = axios.create({

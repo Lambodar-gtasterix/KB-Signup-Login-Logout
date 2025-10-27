@@ -17,6 +17,8 @@ import ProfileScreen from './src/screens/ProfileScreen';
 // ✅ New entry stacks (replace old SellProductStack/MyAdsStack usage here)
 import SellEntryStack from './src/navigation/SellEntryStack';
 import MyAdsEntryStack from './src/navigation/MyAdsEntryStack';
+import { SafeAreaProvider } from 'react-native-safe-area-context';
+
 
 import CustomTabBar from './src/components/CustomTabBar';
 import { AuthProvider, useAuth } from './src/context/AuthContext';

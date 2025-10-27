@@ -1,20 +1,29 @@
-// src/screens/laptopscreens/AddLaptopDetailsScreen.tsx
+﻿// src/screens/laptopscreens/AddLaptopDetailsScreen.tsx
 import React, { useState } from 'react';
 import {
-  View, Text, StyleSheet, TextInput, ScrollView,
-  TouchableOpacity, ActivityIndicator, Alert,
+  View,
+  Text,
+  StyleSheet,
+  TextInput,
+  ScrollView,
+  TouchableOpacity,
+  ActivityIndicator,
+  Alert,
+  KeyboardAvoidingView,
+  Platform,
 } from 'react-native';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import { Dropdown } from 'react-native-element-dropdown';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
-// 🔁 CHANGED: use the SellLaptopStack (so we can navigate to SelectLaptopPhotoScreen)
+// NOTE: use the SellLaptopStack so we can navigate to SelectLaptopPhotoScreen
 import { SellLaptopStackParamList } from '../../navigation/SellLaptopStack';
 import { addLaptop } from '../../api/LaptopsApi/addLaptop';
 import { useAuth } from '../../context/AuthContext';
 
-// 🔁 CHANGED: navigation type is now based on SellLaptopStackParamList
+// NOTE: navigation type is now based on SellLaptopStackParamList
 type AddLaptopNav = NativeStackNavigationProp<SellLaptopStackParamList, 'AddLaptopDetails'>;
 
 const warrantyOptions = [
@@ -22,6 +31,44 @@ const warrantyOptions = [
   { label: '2 Years', value: 2 },
   { label: '3 Years', value: 3 },
 ];
+
+const SPACING = { xs: 4, sm: 8, md: 12, lg: 16, xl: 20, xxl: 24, xxxl: 32 };
+const RADII = { xs: 4, sm: 8, md: 12, lg: 16, xl: 20 };
+const COLORS = {
+  bg: '#F5F5F5',
+  white: '#FFFFFF',
+  text: '#333333',
+  textSecondary: '#666666',
+  textMuted: '#999999',
+  border: '#E0E0E0',
+  primary: '#2C3E50',
+  primaryLight: '#34495E',
+  stepActive: '#4A90E2',
+  stepInactive: '#E0E0E0',
+  error: '#E74C3C',
+  success: '#27AE60',
+  overlay: 'rgba(0, 0, 0, 0.4)',
+};
+
+const toFiniteNumber = (value: unknown): number | null => {
+  if (value === null || value === undefined) return null;
+  if (typeof value === 'number' && Number.isFinite(value)) return value;
+  if (typeof value === 'string') {
+    const trimmed = value.trim();
+    if (!trimmed) return null;
+    const parsed = Number(trimmed);
+    if (Number.isFinite(parsed)) return parsed;
+  }
+  return null;
+};
+
+const extractNumberFromMessage = (message?: string): number | null => {
+  if (typeof message !== 'string') return null;
+  const match = message.match(/(\d+)/);
+  if (!match) return null;
+  const parsed = Number(match[1]);
+  return Number.isFinite(parsed) ? parsed : null;
+};
 
 const AddLaptopDetailsScreen: React.FC = () => {
   const navigation = useNavigation<AddLaptopNav>();
@@ -110,37 +157,65 @@ const AddLaptopDetailsScreen: React.FC = () => {
         sellerId: Number(sellerId),
       } as const;
 
-      const res = await addLaptop(payload);
-      console.log('[ADD LAPTOP RES]', res);
+        const res = await addLaptop(payload);
+        console.log('[ADD LAPTOP RES]', res);
 
-      const created =
-        typeof res?.laptopId === 'number' ||
-        res?.code?.toUpperCase?.() === 'CREATED' ||
-        res?.statusCode === 200 ||
-        res?.statusCode === 201 ||
-        res?.status?.toUpperCase?.() === 'SUCCESS';
+        const idCandidates = [
+          res?.laptopId,
+          (res as any)?.data?.laptopId,
+          (res as any)?.data?.id,
+          (res as any)?.id,
+        ];
+
+        let newId: number | null = null;
+        for (const candidate of idCandidates) {
+          const numeric = toFiniteNumber(candidate);
+          if (numeric !== null) {
+            newId = numeric;
+            break;
+          }
+        }
+
+        if (newId === null) {
+          const messageCandidates = [res?.message, (res as any)?.data?.message];
+          for (const message of messageCandidates) {
+            const numeric = extractNumberFromMessage(message);
+            if (numeric !== null) {
+              newId = numeric;
+              break;
+            }
+          }
+        }
+
+        const created =
+          newId !== null ||
+          res?.code?.toUpperCase?.() === 'CREATED' ||
+          res?.statusCode === 200 ||
+          res?.statusCode === 201 ||
+          res?.status?.toUpperCase?.() === 'SUCCESS';
 
       if (!created) {
         return Alert.alert('Failed', res?.message || 'Laptop could not be created');
-      }
+        }
 
-      // ✅ NEW: get the id and go to the Upload Photos step
-      const newId =
-        typeof res?.laptopId === 'number'
-          ? res.laptopId
-          : Number((res as any)?.data?.laptopId ?? NaN);
+        const rawMessage = (res?.message || 'Laptop created successfully').trim();
+        const displayMessage =
+          rawMessage
+            .replace(/with id.*$/i, '')
+            .replace(/\b(id|ID)[:\s#-]*\d+\b/g, '')
+            .trim() || 'Laptop created successfully';
 
-      if (!Number.isFinite(newId)) {
-        // Fallback if backend didn't return a clean id
-        const msg = (res?.message || 'Laptop created').replace(/with id.*/i, '').trim();
-        Alert.alert('Success', msg);
+        if (newId === null) {
+          Alert.alert(
+            'Success',
+            `${displayMessage}. Unable to determine the new listing id automatically. Please upload photos from My Laptop Ads.`,
+          );
+          return;
+        }
+
+        Alert.alert('Success', displayMessage);
+        navigation.navigate('SelectLaptopPhotoScreen', { laptopId: newId });
         return;
-      }
-
-      // Navigate to image upload with the newly created laptopId
-      // (Route is defined in SellLaptopStack)
-      navigation.navigate('SelectLaptopPhotoScreen', { laptopId: newId });
-      return;
     } catch (err: any) {
       console.log('[ADD LAPTOP ERR]', err?.response?.data || err?.message);
       const apiMsg = err?.response?.data?.message || err?.message || 'Failed to add laptop';
@@ -150,177 +225,431 @@ const AddLaptopDetailsScreen: React.FC = () => {
     }
   };
 
-  return (
-    <View style={styles.container}>
-      {/* Header */}
-      <View style={styles.header}>
-        <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()}>
-          <Icon name="arrow-left" size={24} color="#333" />
-        </TouchableOpacity>
-        <Text style={styles.headerTitle}>Laptop Details</Text>
-        <View style={styles.placeholder} />
+  const renderField = (
+    label: string,
+    field: keyof typeof formData,
+    options: {
+      placeholder?: string;
+      keyboardType?: 'default' | 'numeric';
+      required?: boolean;
+      autoCapitalize?: 'none' | 'sentences' | 'words' | 'characters';
+      autoCorrect?: boolean;
+    } = {}
+  ) => {
+    const {
+      placeholder = label,
+      keyboardType = 'default',
+      required = false,
+      autoCapitalize = 'sentences',
+      autoCorrect = true,
+    } = options;
+
+    return (
+      <View style={styles.inputWrapper} key={String(field)}>
+        <Text style={styles.label}>
+          {label} {required && <Text style={styles.required}>*</Text>}
+        </Text>
+        <View style={styles.inputContainer}>
+          <TextInput
+            style={styles.input}
+            placeholder={placeholder}
+            placeholderTextColor={COLORS.textMuted}
+            value={(formData as any)[field]?.toString() ?? ''}
+            onChangeText={(v) => handleInputChange(field, v)}
+            keyboardType={keyboardType}
+            autoCapitalize={autoCapitalize}
+            autoCorrect={autoCorrect}
+          />
+        </View>
       </View>
+    );
+  };
 
-      {/* Progress */}
-      <View className="progress" style={styles.progressContainer}>
-        <View style={styles.progressStep}>
-          <View style={[styles.progressCircle, styles.activeStep]}>
-            <Text style={styles.progressText}>1</Text>
-          </View>
-        </View>
-        <View style={styles.progressLine} />
-        <View style={styles.progressStep}>
-          <View style={styles.progressCircle}>
-            <Text style={styles.progressText}>2</Text>
-          </View>
-        </View>
-        <View style={styles.progressLine} />
-        <View style={styles.progressStep}>
-          <View style={styles.progressCircle}>
-            <Text style={styles.progressText}>3</Text>
-          </View>
-        </View>
-      </View>
+  const renderDropdown = (
+    label: string,
+    field: keyof typeof formData,
+    data: Array<{ label: string; value: any }>,
+    options: { placeholder?: string; required?: boolean } = {}
+  ) => {
+    const { placeholder = `Select ${label.toLowerCase()}`, required = false } = options;
 
-      {/* Form */}
-      <ScrollView style={styles.formContainer} showsVerticalScrollIndicator={false}>
-        {renderField('Serial Number', 'serialNumber')}
-        {renderField('Dealer', 'dealer')}
-        {renderField('Brand', 'brand')}
-        {renderField('Model', 'model')}
-        {renderField('Price', 'price', 'numeric')}
-
-        {/* Warranty (Dropdown) */}
+    return (
+      <View style={styles.inputWrapper} key={String(field)}>
+        <Text style={styles.label}>
+          {label} {required && <Text style={styles.required}>*</Text>}
+        </Text>
         <View style={styles.inputContainer}>
           <Dropdown
             style={styles.dropdown}
-            placeholderStyle={styles.placeholderStyle}
-            selectedTextStyle={styles.selectedTextStyle}
-            data={warrantyOptions}
+            placeholderStyle={styles.dropdownPlaceholder}
+            selectedTextStyle={styles.dropdownSelected}
+            data={data}
             labelField="label"
             valueField="value"
-            placeholder="Warranty (Years)"
-            value={formData.warrantyInYear}
-            onChange={(item) => handleInputChange('warrantyInYear', item.value)}
+            placeholder={placeholder}
+            value={(formData as any)[field]}
+            onChange={(item) => handleInputChange(field, item.value)}
           />
         </View>
-
-        {renderField('Processor', 'processor')}
-        {renderField('Processor Brand', 'processorBrand')}
-        {renderField('RAM', 'ram')}
-        {renderField('Storage', 'storage')}
-        {renderField('Colour', 'colour')}
-        {renderField('Screen Size', 'screenSize')}
-
-        {/* Optional fields (keep if you want to send full backend sample) */}
-        {renderField('Memory Type', 'memoryType')}
-        {renderField('Battery', 'battery')}
-        {renderField('Battery Life', 'batteryLife')}
-        {renderField('Graphics Card', 'graphicsCard')}
-        {renderField('Graphic Brand', 'graphicBrand')}
-        {renderField('Weight', 'weight')}
-        {renderField('Manufacturer', 'manufacturer')}
-        {renderField('USB Ports', 'usbPorts', 'numeric')}
-      </ScrollView>
-
-      {/* Next Button */}
-      <View style={styles.buttonContainer}>
-        <TouchableOpacity
-          style={[styles.nextButton, loading && { opacity: 0.7 }]}
-          onPress={handleNext}
-          disabled={loading}
-        >
-          {loading ? <ActivityIndicator color="#fff" /> : <Text style={styles.nextButtonText}>Next</Text>}
-        </TouchableOpacity>
-      </View>
-    </View>
-  );
-
-  function renderField(
-    placeholder: string,
-    field: keyof typeof formData,
-    keyboardType: 'default' | 'numeric' = 'default'
-  ) {
-    return (
-      <View style={styles.inputContainer} key={String(field)}>
-        <TextInput
-          style={styles.input}
-          placeholder={placeholder}
-          placeholderTextColor="#999"
-          value={(formData as any)[field]?.toString()}
-          onChangeText={(v) => handleInputChange(field, v)}
-          keyboardType={keyboardType}
-        />
       </View>
     );
-  }
+  };
+
+  return (
+    <SafeAreaView style={styles.safeArea} edges={['top', 'left', 'right']}>
+      <KeyboardAvoidingView
+        style={styles.flex}
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 20}
+      >
+        <View style={styles.container}>
+          {/* Header */}
+          <View style={styles.header}>
+            <TouchableOpacity
+              style={styles.backButton}
+              onPress={() => navigation.goBack()}
+              hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+            >
+              <Icon name="arrow-left" size={24} color={COLORS.text} />
+            </TouchableOpacity>
+            <Text style={styles.headerTitle} numberOfLines={1}>
+              Laptop Details
+            </Text>
+            <View style={styles.placeholder} />
+          </View>
+
+          {/* Progress Stepper */}
+          <View style={styles.progressContainer}>
+            <View style={styles.progressStep}>
+              <View style={[styles.progressCircle, styles.activeStep]}>
+                <Icon name="check" size={16} color={COLORS.white} />
+              </View>
+              <Text style={[styles.stepLabel, styles.activeStepLabel]}>Details</Text>
+            </View>
+            <View style={[styles.progressLine, styles.activeProgressLine]} />
+            <View style={styles.progressStep}>
+              <View style={styles.progressCircle}>
+                <Text style={styles.progressNumber}>2</Text>
+              </View>
+              <Text style={styles.stepLabel}>Photos</Text>
+            </View>
+            <View style={styles.progressLine} />
+            <View style={styles.progressStep}>
+              <View style={styles.progressCircle}>
+                <Text style={styles.progressNumber}>3</Text>
+              </View>
+              <Text style={styles.stepLabel}>Confirm</Text>
+            </View>
+          </View>
+
+          {/* Form */}
+          <ScrollView
+            style={styles.form}
+            contentContainerStyle={styles.formContent}
+            showsVerticalScrollIndicator={false}
+            keyboardShouldPersistTaps="handled"
+          >
+            {renderField('Serial Number', 'serialNumber', {
+              placeholder: 'Enter laptop serial number',
+              required: true,
+              autoCapitalize: 'characters',
+              autoCorrect: false,
+            })}
+            {renderField('Dealer', 'dealer', {
+              placeholder: 'Enter dealer name',
+              autoCapitalize: 'words',
+            })}
+            {renderField('Brand', 'brand', {
+              placeholder: 'e.g., HP, Dell, Apple',
+              required: true,
+              autoCapitalize: 'words',
+            })}
+            {renderField('Model', 'model', {
+              placeholder: 'e.g., 15s-fq5009TU',
+              required: true,
+              autoCapitalize: 'characters',
+              autoCorrect: false,
+            })}
+            {renderField('Price', 'price', {
+              placeholder: 'Enter price',
+              keyboardType: 'numeric',
+              required: true,
+              autoCapitalize: 'none',
+              autoCorrect: false,
+            })}
+            {renderDropdown('Warranty (Years)', 'warrantyInYear', warrantyOptions, {
+              placeholder: 'Select warranty duration',
+            })}
+
+            {renderField('Processor', 'processor', {
+              placeholder: 'e.g., Intel Core i5-1335U',
+              autoCapitalize: 'words',
+            })}
+            {renderField('Processor Brand', 'processorBrand', {
+              placeholder: 'e.g., Intel, AMD',
+              autoCapitalize: 'words',
+            })}
+            {renderField('RAM', 'ram', {
+              placeholder: 'e.g., 16 GB',
+              autoCapitalize: 'characters',
+              autoCorrect: false,
+            })}
+            {renderField('Storage', 'storage', {
+              placeholder: 'e.g., 512 GB SSD',
+              autoCapitalize: 'characters',
+              autoCorrect: false,
+            })}
+            {renderField('Colour', 'colour', {
+              placeholder: 'e.g., Silver',
+              autoCapitalize: 'words',
+            })}
+            {renderField('Screen Size', 'screenSize', {
+              placeholder: 'e.g., 15.6 inch',
+              autoCapitalize: 'none',
+              autoCorrect: false,
+            })}
+
+            {renderField('Memory Type', 'memoryType', {
+              placeholder: 'e.g., DDR4',
+              autoCapitalize: 'characters',
+              autoCorrect: false,
+            })}
+            {renderField('Battery', 'battery', {
+              placeholder: 'e.g., 41 Wh Li-ion',
+              autoCapitalize: 'words',
+            })}
+            {renderField('Battery Life', 'batteryLife', {
+              placeholder: 'e.g., Up to 8 hours',
+              autoCapitalize: 'sentences',
+            })}
+            {renderField('Graphics Card', 'graphicsCard', {
+              placeholder: 'e.g., Intel Iris Xe',
+              autoCapitalize: 'words',
+            })}
+            {renderField('Graphic Brand', 'graphicBrand', {
+              placeholder: 'e.g., Intel',
+              autoCapitalize: 'words',
+            })}
+            {renderField('Weight', 'weight', {
+              placeholder: 'e.g., 1.59 kg',
+              autoCapitalize: 'none',
+              autoCorrect: false,
+            })}
+            {renderField('Manufacturer', 'manufacturer', {
+              placeholder: 'e.g., HP India Pvt Ltd',
+              autoCapitalize: 'words',
+            })}
+            {renderField('USB Ports', 'usbPorts', {
+              placeholder: 'Number of USB ports',
+              keyboardType: 'numeric',
+              autoCapitalize: 'none',
+              autoCorrect: false,
+            })}
+
+            <View style={{ height: SPACING.xxxl }} />
+          </ScrollView>
+
+          {/* Footer */}
+          <View style={styles.footer}>
+            <TouchableOpacity
+              style={[styles.nextButton, loading && styles.nextButtonDisabled]}
+              onPress={handleNext}
+              disabled={loading}
+              activeOpacity={0.8}
+            >
+              {loading ? (
+                <ActivityIndicator color={COLORS.white} size="small" />
+              ) : (
+                <>
+                  <Text style={styles.nextButtonText}>Next</Text>
+                  <Icon name="arrow-right" size={20} color={COLORS.white} />
+                </>
+              )}
+            </TouchableOpacity>
+          </View>
+        </View>
+      </KeyboardAvoidingView>
+    </SafeAreaView>
+  );
 };
 
 export default AddLaptopDetailsScreen;
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#f5f5f5' },
+  safeArea: {
+    flex: 1,
+    backgroundColor: COLORS.bg,
+  },
+  flex: {
+    flex: 1,
+  },
+  container: {
+    flex: 1,
+    backgroundColor: COLORS.bg,
+  },
+
+  // Header
   header: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingHorizontal: 20,
-    paddingTop: 50,
-    paddingBottom: 20,
-    backgroundColor: '#fff',
+    paddingHorizontal: SPACING.lg,
+    paddingVertical: SPACING.lg,
+    backgroundColor: COLORS.white,
   },
-  backButton: { padding: 5 },
-  headerTitle: { fontSize: 18, fontWeight: '600', color: '#333' },
-  placeholder: { width: 34 },
+  backButton: {
+    padding: SPACING.sm,
+    marginLeft: -SPACING.sm,
+  },
+  headerTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: COLORS.text,
+    flex: 1,
+    textAlign: 'center',
+  },
+  placeholder: {
+    width: 40,
+  },
+
+  // Progress Stepper
   progressContainer: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: 20,
-    backgroundColor: '#fff',
-    marginBottom: 20,
+    paddingVertical: SPACING.xl,
+    backgroundColor: COLORS.white,
+    marginBottom: SPACING.md,
   },
-  progressStep: { alignItems: 'center' },
+  progressStep: {
+    alignItems: 'center',
+  },
   progressCircle: {
-    width: 30,
-    height: 30,
-    borderRadius: 15,
-    backgroundColor: '#E0E0E0',
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: COLORS.stepInactive,
     justifyContent: 'center',
     alignItems: 'center',
+    borderWidth: 2,
+    borderColor: COLORS.stepInactive,
   },
-  activeStep: { backgroundColor: '#4A90E2' },
-  progressText: { fontSize: 14, fontWeight: '600', color: '#fff' },
-  progressLine: { width: 40, height: 2, backgroundColor: '#E0E0E0', marginHorizontal: 5 },
-  formContainer: { flex: 1, paddingHorizontal: 20 },
-  inputContainer: { marginBottom: 16 },
+  activeStep: {
+    backgroundColor: COLORS.stepActive,
+    borderColor: COLORS.stepActive,
+  },
+  progressNumber: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: COLORS.white,
+  },
+  progressLine: {
+    width: 40,
+    height: 2,
+    backgroundColor: COLORS.stepInactive,
+    marginHorizontal: SPACING.sm,
+  },
+  activeProgressLine: {
+    backgroundColor: COLORS.stepActive,
+  },
+  stepLabel: {
+    fontSize: 12,
+    color: COLORS.textMuted,
+    marginTop: SPACING.sm,
+    fontWeight: '500',
+  },
+  activeStepLabel: {
+    color: COLORS.stepActive,
+    fontWeight: '600',
+  },
+
+  // Form
+  form: {
+    flex: 1,
+  },
+  formContent: {
+    paddingHorizontal: SPACING.lg,
+    paddingTop: SPACING.md,
+    paddingBottom: SPACING.xxxl,
+  },
+  inputWrapper: {
+    marginBottom: SPACING.xl,
+  },
+  label: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: COLORS.text,
+    marginBottom: SPACING.sm,
+  },
+  required: {
+    color: COLORS.error,
+  },
+  inputContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: COLORS.white,
+    borderRadius: RADII.md,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    paddingHorizontal: SPACING.md,
+    minHeight: 52,
+  },
   input: {
-    backgroundColor: '#fff',
-    borderRadius: 8,
-    paddingHorizontal: 16,
-    paddingVertical: 16,
+    flex: 1,
     fontSize: 16,
-    color: '#333',
-    borderWidth: 1,
-    borderColor: '#E0E0E0',
+    color: COLORS.text,
+    paddingVertical: SPACING.md,
   },
+
+  // Dropdown
   dropdown: {
-    height: 52,
-    backgroundColor: '#fff',
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: '#E0E0E0',
-    paddingHorizontal: 16,
+    flex: 1,
+    height: 40,
   },
-  placeholderStyle: { fontSize: 16, color: '#999' },
-  selectedTextStyle: { fontSize: 16, color: '#333' },
-  buttonContainer: { paddingHorizontal: 20, paddingVertical: 20, backgroundColor: '#f5f5f5' },
+  dropdownPlaceholder: {
+    fontSize: 16,
+    color: COLORS.textMuted,
+  },
+  dropdownSelected: {
+    fontSize: 16,
+    color: COLORS.text,
+    fontWeight: '500',
+  },
+
+  // Footer
+  footer: {
+    backgroundColor: COLORS.white,
+    paddingHorizontal: SPACING.lg,
+    paddingTop: SPACING.md,
+    paddingBottom: SPACING.lg,
+    borderTopWidth: 1,
+    borderTopColor: COLORS.border,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: -2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 8,
+    elevation: 8,
+  },
   nextButton: {
-    backgroundColor: '#2C3E50',
-    borderRadius: 8,
-    paddingVertical: 16,
+    flexDirection: 'row',
+    backgroundColor: COLORS.primary,
+    borderRadius: RADII.md,
+    paddingVertical: SPACING.lg,
     alignItems: 'center',
     justifyContent: 'center',
+    shadowColor: COLORS.primary,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 4,
   },
-  nextButtonText: { color: '#fff', fontSize: 16, fontWeight: '600' },
+  nextButtonDisabled: {
+    opacity: 0.7,
+  },
+  nextButtonText: {
+    color: COLORS.white,
+    fontSize: 16,
+    fontWeight: '600',
+    marginRight: SPACING.sm,
+  },
 });

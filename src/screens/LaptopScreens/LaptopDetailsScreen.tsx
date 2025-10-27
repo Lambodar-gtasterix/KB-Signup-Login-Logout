@@ -22,7 +22,9 @@ import { MyLaptopAdsStackParamList } from '../../navigation/MyLaptopAdsStack';
 import { deleteLaptop } from '../../api/LaptopsApi/deleteLaptop';
 import { getLaptopById, LaptopDetail } from '../../api/LaptopsApi/getLaptopById';
 import BottomSheet from '../../components/myads/BottomSheet';
+import BottomActionBar from '../../components/myadsflowcomponets/BottomActionBar';
 import LaptopCardMenu from '../../components/laptops/LaptopCardMenu';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 type DetailsRouteProp = RouteProp<MyLaptopAdsStackParamList, 'LaptopDetails'>;
 type NavProp = NativeStackNavigationProp<MyLaptopAdsStackParamList>;
@@ -46,6 +48,8 @@ const LaptopDetailsScreen: React.FC = () => {
   const navigation = useNavigation<NavProp>();
   const { params } = useRoute<DetailsRouteProp>();
   const { laptopId } = params;
+  const insets = useSafeAreaInsets();
+  const ACTION_BAR_HEIGHT = 96;
 
   const [data, setData] = useState<LaptopDetail | null>(null);
   const [loading, setLoading] = useState(true);
@@ -229,7 +233,10 @@ const LaptopDetailsScreen: React.FC = () => {
 
   return (
     <View style={styles.container}>
-      <ScrollView showsVerticalScrollIndicator={false}>
+      <ScrollView
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={{ paddingBottom: ACTION_BAR_HEIGHT + insets.bottom + 20 }}
+      >
         <View style={styles.header}>
           {images.length > 0 ? (
             <>
@@ -314,6 +321,11 @@ const LaptopDetailsScreen: React.FC = () => {
           <View style={styles.bottomSpacer} />
         </View>
       </ScrollView>
+
+      <BottomActionBar
+        onChat={() => navigation.navigate('ChatScreen')}
+        onBid={() => console.log('Start Bidding')}
+      />
 
       <BottomSheet visible={sheetVisible} onClose={() => setSheetVisible(false)} height={0.3}>
         <LaptopCardMenu

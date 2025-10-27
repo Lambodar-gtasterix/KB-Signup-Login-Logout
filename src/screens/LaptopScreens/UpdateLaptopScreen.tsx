@@ -1,19 +1,25 @@
-// src/screens/LaptopScreens/UpdateLaptopScreen.tsx
 import React, { useEffect, useState } from 'react';
 import {
-  View,
-  Text,
-  TextInput,
-  StyleSheet,
-  ScrollView,
-  TouchableOpacity,
   ActivityIndicator,
   Alert,
+  KeyboardAvoidingView,
+  Platform,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
 } from 'react-native';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import { Dropdown } from 'react-native-element-dropdown';
-import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
+import {
+  RouteProp,
+  useNavigation,
+  useRoute,
+} from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { MyLaptopAdsStackParamList } from '../../navigation/MyLaptopAdsStack';
 import { getLaptopById, LaptopDetail } from '../../api/LaptopsApi/getLaptopById';
@@ -74,10 +80,29 @@ const warrantyOptions = [
   { label: '3 Years', value: 3 },
 ];
 
+const SPACING = { xs: 4, sm: 8, md: 12, lg: 16, xl: 20, xxl: 24, xxxl: 32 };
+const RADII = { xs: 4, sm: 8, md: 12, lg: 16, xl: 20 };
+const COLORS = {
+  bg: '#F5F5F5',
+  white: '#FFFFFF',
+  text: '#333333',
+  textSecondary: '#666666',
+  textMuted: '#999999',
+  border: '#E0E0E0',
+  primary: '#2C3E50',
+  primaryLight: '#34495E',
+  stepActive: '#4A90E2',
+  stepInactive: '#E0E0E0',
+  error: '#E74C3C',
+  success: '#27AE60',
+  overlay: 'rgba(0, 0, 0, 0.4)',
+};
+
 const UpdateLaptopScreen: React.FC = () => {
   const navigation = useNavigation<NavProp>();
-  const { params } = useRoute<UpdateRouteProp>();
-  const { laptopId } = params;
+  const {
+    params: { laptopId },
+  } = useRoute<UpdateRouteProp>();
 
   const [form, setForm] = useState<FormState>(DEFAULT_FORM);
   const [loading, setLoading] = useState(true);
@@ -91,11 +116,13 @@ const UpdateLaptopScreen: React.FC = () => {
         setLoading(true);
         const data = await getLaptopById(laptopId);
         if (!mounted) return;
-        setInitialData(data);
+
         const allowedWarranty =
           data.warrantyInYear != null && warrantyOptions.some((option) => option.value === data.warrantyInYear)
             ? data.warrantyInYear
             : DEFAULT_FORM.warrantyInYear;
+
+        setInitialData(data);
         setForm({
           serialNumber: data.serialNumber ?? '',
           dealer: data.dealer ?? '',
@@ -132,8 +159,8 @@ const UpdateLaptopScreen: React.FC = () => {
     };
   }, [laptopId]);
 
-  const handleTextChange = (key: Exclude<keyof FormState, 'warrantyInYear'>, value: string) => {
-    setForm((prev) => ({ ...prev, [key]: value }));
+  const handleFieldChange = (field: keyof FormState, value: any) => {
+    setForm((prev) => ({ ...prev, [field]: value }));
   };
 
   const trimmed = (value: string) => {
@@ -141,7 +168,7 @@ const UpdateLaptopScreen: React.FC = () => {
     return next.length > 0 ? next : undefined;
   };
 
-  const onSave = async () => {
+  const handleSave = async () => {
     if (saving) return;
 
     if (!form.serialNumber.trim() || !form.brand.trim() || !form.model.trim() || !form.price.trim()) {
@@ -199,143 +226,380 @@ const UpdateLaptopScreen: React.FC = () => {
     }
   };
 
+  type FieldOptions = {
+    placeholder?: string;
+    keyboardType?: 'default' | 'numeric';
+    required?: boolean;
+    autoCapitalize?: 'none' | 'sentences' | 'words' | 'characters';
+    autoCorrect?: boolean;
+  };
+
+  const renderField = (
+    label: string,
+    field: Exclude<keyof FormState, 'warrantyInYear'>,
+    options: FieldOptions = {},
+  ) => {
+    const {
+      placeholder = label,
+      keyboardType = 'default',
+      required = false,
+      autoCapitalize = 'sentences',
+      autoCorrect = true,
+    } = options;
+
+    return (
+      <View style={styles.inputWrapper} key={field}>
+        <Text style={styles.label}>
+          {label} {required && <Text style={styles.required}>*</Text>}
+        </Text>
+        <View style={styles.inputContainer}>
+          <TextInput
+            style={styles.input}
+            placeholder={placeholder}
+            placeholderTextColor={COLORS.textMuted}
+            value={form[field]}
+            onChangeText={(text) => handleFieldChange(field, text)}
+            keyboardType={keyboardType}
+            autoCapitalize={autoCapitalize}
+            autoCorrect={autoCorrect}
+          />
+        </View>
+      </View>
+    );
+  };
+
+  const renderDropdown = (
+    label: string,
+    field: 'warrantyInYear',
+    data: Array<{ label: string; value: number }>,
+    options: { placeholder?: string; required?: boolean } = {},
+  ) => {
+    const { placeholder = `Select ${label.toLowerCase()}`, required = false } = options;
+
+    return (
+      <View style={styles.inputWrapper} key={field}>
+        <Text style={styles.label}>
+          {label} {required && <Text style={styles.required}>*</Text>}
+        </Text>
+        <View style={styles.inputContainer}>
+          <Dropdown
+            style={styles.dropdown}
+            placeholderStyle={styles.dropdownPlaceholder}
+            selectedTextStyle={styles.dropdownSelected}
+            data={data}
+            labelField="label"
+            valueField="value"
+            placeholder={placeholder}
+            value={form[field]}
+            onChange={(item) =>
+              handleFieldChange(
+                field,
+                Number(item.value) || DEFAULT_FORM.warrantyInYear,
+              )
+            }
+          />
+        </View>
+      </View>
+    );
+  };
+
   if (loading) {
     return (
-      <View style={[styles.container, styles.center]}>
-        <ActivityIndicator size="large" />
-        <Text style={styles.loadingText}>Loading laptop...</Text>
-      </View>
+      <SafeAreaView style={styles.safeArea} edges={['top', 'left', 'right']}>
+        <View style={[styles.container, styles.center]}>
+          <ActivityIndicator size="large" color={COLORS.primary} />
+          <Text style={styles.loadingText}>Loading laptop...</Text>
+        </View>
+      </SafeAreaView>
     );
   }
 
   return (
-    <View style={styles.container}>
-      <View style={styles.header}>
-        <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()} disabled={saving}>
-          <Icon name="arrow-left" size={24} color="#333" />
-        </TouchableOpacity>
-        <Text style={styles.headerTitle}>Edit Laptop Details</Text>
-        <View style={styles.placeholder} />
-      </View>
+    <SafeAreaView style={styles.safeArea} edges={['top', 'left', 'right']}>
+      <KeyboardAvoidingView
+        style={styles.flex}
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 20}
+      >
+        <View style={styles.container}>
+          <View style={styles.header}>
+            <TouchableOpacity
+              style={styles.backButton}
+              onPress={() => navigation.goBack()}
+              disabled={saving}
+            >
+              <Icon name="arrow-left" size={24} color={COLORS.text} />
+            </TouchableOpacity>
+            <Text style={styles.headerTitle}>Edit Laptop Details</Text>
+            <View style={styles.placeholder} />
+          </View>
 
-      <ScrollView style={styles.formContainer} showsVerticalScrollIndicator={false}>
-        {renderField('Serial Number', 'serialNumber')}
-        {renderField('Dealer', 'dealer')}
-        {renderField('Brand', 'brand')}
-        {renderField('Model', 'model')}
-        {renderField('Price', 'price', 'numeric')}
+          <View style={styles.progressContainer} />
 
-        <View style={styles.inputContainer}>
-          <Dropdown
-            style={styles.dropdown}
-            placeholderStyle={styles.placeholderStyle}
-            selectedTextStyle={styles.selectedTextStyle}
-            data={warrantyOptions}
-            labelField="label"
-            valueField="value"
-            placeholder="Warranty (Years)"
-            value={form.warrantyInYear}
-            onChange={(item) =>
-              setForm((prev) => ({ ...prev, warrantyInYear: Number(item.value) || DEFAULT_FORM.warrantyInYear }))
-            }
-          />
+          <ScrollView
+            style={styles.form}
+            contentContainerStyle={styles.formContent}
+            showsVerticalScrollIndicator={false}
+            keyboardShouldPersistTaps="handled"
+          >
+            {renderField('Serial Number', 'serialNumber', {
+              placeholder: 'Enter laptop serial number',
+              required: true,
+              autoCapitalize: 'characters',
+              autoCorrect: false,
+            })}
+            {renderField('Dealer', 'dealer', {
+              placeholder: 'Enter dealer name',
+              autoCapitalize: 'words',
+            })}
+            {renderField('Brand', 'brand', {
+              placeholder: 'e.g., HP, Dell, Apple',
+              required: true,
+              autoCapitalize: 'words',
+            })}
+            {renderField('Model', 'model', {
+              placeholder: 'e.g., 15s-fq5009TU',
+              required: true,
+              autoCapitalize: 'characters',
+              autoCorrect: false,
+            })}
+            {renderField('Price', 'price', {
+              placeholder: 'Enter price',
+              keyboardType: 'numeric',
+              required: true,
+              autoCapitalize: 'none',
+              autoCorrect: false,
+            })}
+            {renderDropdown('Warranty (Years)', 'warrantyInYear', warrantyOptions, {
+              placeholder: 'Select warranty duration',
+            })}
+
+            {renderField('Processor', 'processor', {
+              placeholder: 'e.g., Intel Core i5-1335U',
+              autoCapitalize: 'words',
+            })}
+            {renderField('Processor Brand', 'processorBrand', {
+              placeholder: 'e.g., Intel, AMD',
+              autoCapitalize: 'words',
+            })}
+            {renderField('RAM', 'ram', {
+              placeholder: 'e.g., 16 GB',
+              autoCapitalize: 'characters',
+              autoCorrect: false,
+            })}
+            {renderField('Storage', 'storage', {
+              placeholder: 'e.g., 512 GB SSD',
+              autoCapitalize: 'characters',
+              autoCorrect: false,
+            })}
+            {renderField('Colour', 'colour', {
+              placeholder: 'e.g., Silver',
+              autoCapitalize: 'words',
+            })}
+            {renderField('Screen Size', 'screenSize', {
+              placeholder: 'e.g., 15.6 inch',
+              autoCapitalize: 'none',
+              autoCorrect: false,
+            })}
+
+            {renderField('Memory Type', 'memoryType', {
+              placeholder: 'e.g., DDR4',
+              autoCapitalize: 'characters',
+              autoCorrect: false,
+            })}
+            {renderField('Battery', 'battery', {
+              placeholder: 'e.g., 41 Wh Li-ion',
+              autoCapitalize: 'words',
+            })}
+            {renderField('Battery Life', 'batteryLife', {
+              placeholder: 'e.g., Up to 8 hours',
+              autoCapitalize: 'sentences',
+            })}
+            {renderField('Graphics Card', 'graphicsCard', {
+              placeholder: 'e.g., Intel Iris Xe',
+              autoCapitalize: 'words',
+            })}
+            {renderField('Graphic Brand', 'graphicBrand', {
+              placeholder: 'e.g., Intel',
+              autoCapitalize: 'words',
+            })}
+            {renderField('Weight', 'weight', {
+              placeholder: 'e.g., 1.59 kg',
+              autoCapitalize: 'none',
+              autoCorrect: false,
+            })}
+            {renderField('Manufacturer', 'manufacturer', {
+              placeholder: 'e.g., HP India Pvt Ltd',
+              autoCapitalize: 'words',
+            })}
+            {renderField('USB Ports', 'usbPorts', {
+              placeholder: 'Number of USB ports',
+              keyboardType: 'numeric',
+              autoCapitalize: 'none',
+              autoCorrect: false,
+            })}
+
+            <View style={{ height: SPACING.xxxl }} />
+          </ScrollView>
+
+          <View style={styles.footer}>
+            <TouchableOpacity
+              style={[styles.nextButton, saving && styles.nextButtonDisabled]}
+              onPress={handleSave}
+              disabled={saving}
+              activeOpacity={0.8}
+            >
+              {saving ? (
+                <ActivityIndicator color={COLORS.white} size="small" />
+              ) : (
+                <>
+                  <Text style={styles.nextButtonText}>Update</Text>
+                </>
+              )}
+            </TouchableOpacity>
+          </View>
         </View>
-
-        {renderField('Processor', 'processor')}
-        {renderField('Processor Brand', 'processorBrand')}
-        {renderField('RAM', 'ram')}
-        {renderField('Storage', 'storage')}
-        {renderField('Colour', 'colour')}
-        {renderField('Screen Size', 'screenSize')}
-        {renderField('Memory Type', 'memoryType')}
-        {renderField('Battery', 'battery')}
-        {renderField('Battery Life', 'batteryLife')}
-        {renderField('Graphics Card', 'graphicsCard')}
-        {renderField('Graphic Brand', 'graphicBrand')}
-        {renderField('Weight', 'weight')}
-        {renderField('Manufacturer', 'manufacturer')}
-        {renderField('USB Ports', 'usbPorts', 'numeric')}
-      </ScrollView>
-
-      <View style={styles.buttonContainer}>
-        <TouchableOpacity
-          style={[styles.saveButton, saving && { opacity: 0.7 }]}
-          onPress={onSave}
-          disabled={saving}
-        >
-          {saving ? <ActivityIndicator color="#fff" /> : <Text style={styles.saveText}>Save Changes</Text>}
-        </TouchableOpacity>
-      </View>
-    </View>
+      </KeyboardAvoidingView>
+    </SafeAreaView>
   );
-
-  function renderField(
-    placeholder: string,
-    field: Exclude<keyof FormState, 'warrantyInYear'>,
-    keyboardType: 'default' | 'numeric' = 'default'
-  ) {
-    return (
-      <View style={styles.inputContainer} key={String(field)}>
-        <TextInput
-          style={styles.input}
-          placeholder={placeholder}
-          placeholderTextColor="#999"
-          value={form[field]}
-          onChangeText={(text) => handleTextChange(field, text)}
-          keyboardType={keyboardType}
-        />
-      </View>
-    );
-  }
 };
 
 export default UpdateLaptopScreen;
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#f5f5f5' },
-  center: { justifyContent: 'center', alignItems: 'center' },
-  loadingText: { marginTop: 8, color: '#666' },
+  safeArea: {
+    flex: 1,
+    backgroundColor: COLORS.bg,
+  },
+  flex: {
+    flex: 1,
+  },
+  container: {
+    flex: 1,
+    backgroundColor: COLORS.bg,
+  },
+  center: {
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: SPACING.lg,
+  },
+  loadingText: {
+    marginTop: SPACING.md,
+    color: COLORS.textSecondary,
+    fontSize: 16,
+  },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingHorizontal: 20,
-    paddingTop: 50,
-    paddingBottom: 20,
-    backgroundColor: '#fff',
+    paddingHorizontal: SPACING.lg,
+    paddingVertical: SPACING.lg,
+    backgroundColor: COLORS.white,
   },
-  backButton: { padding: 5 },
-  headerTitle: { fontSize: 18, fontWeight: '600', color: '#333' },
-  placeholder: { width: 34 },
-  formContainer: { flex: 1, paddingHorizontal: 20, marginTop:20},
-  inputContainer: { marginBottom: 16 },
-  input: {
-    backgroundColor: '#fff',
-    borderRadius: 8,
-    paddingHorizontal: 16,
-    paddingVertical: 16,
-    fontSize: 16,
-    color: '#333',
-    borderWidth: 1,
-    borderColor: '#E0E0E0',
+  backButton: {
+    padding: SPACING.sm,
+    marginLeft: -SPACING.sm,
   },
-  dropdown: {
-    height: 52,
-    backgroundColor: '#fff',
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: '#E0E0E0',
-    paddingHorizontal: 16,
+  headerTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: COLORS.text,
+    flex: 1,
+    textAlign: 'center',
   },
-  placeholderStyle: { fontSize: 16, color: '#999' },
-  selectedTextStyle: { fontSize: 16, color: '#333' },
-  buttonContainer: { paddingHorizontal: 20, paddingVertical: 20, backgroundColor: '#f5f5f5' },
-  saveButton: {
-    backgroundColor: '#2C3E50',
-    borderRadius: 8,
-    paddingVertical: 16,
+  placeholder: {
+    width: 40,
+  },
+  progressContainer: {
+    flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
+    paddingVertical: SPACING.xl,
+    backgroundColor: COLORS.white,
+    marginBottom: SPACING.md,
   },
-  saveText: { color: '#fff', fontSize: 16, fontWeight: '600' },
+  form: {
+    flex: 1,
+  },
+  formContent: {
+    paddingHorizontal: SPACING.lg,
+    paddingTop: SPACING.md,
+    paddingBottom: SPACING.xxxl,
+  },
+  inputWrapper: {
+    marginBottom: SPACING.xl,
+  },
+  label: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: COLORS.text,
+    marginBottom: SPACING.sm,
+  },
+  required: {
+    color: COLORS.error,
+  },
+  inputContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: COLORS.white,
+    borderRadius: RADII.md,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    paddingHorizontal: SPACING.md,
+    minHeight: 52,
+  },
+  input: {
+    flex: 1,
+    fontSize: 16,
+    color: COLORS.text,
+    paddingVertical: SPACING.md,
+  },
+  dropdown: {
+    flex: 1,
+    height: 40,
+  },
+  dropdownPlaceholder: {
+    fontSize: 16,
+    color: COLORS.textMuted,
+  },
+  dropdownSelected: {
+    fontSize: 16,
+    color: COLORS.text,
+    fontWeight: '500',
+  },
+  footer: {
+    backgroundColor: COLORS.white,
+    paddingHorizontal: SPACING.lg,
+    paddingTop: SPACING.md,
+    paddingBottom: SPACING.lg,
+    borderTopWidth: 1,
+    borderTopColor: COLORS.border,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: -2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 8,
+    elevation: 8,
+  },
+  nextButton: {
+    flexDirection: 'row',
+    backgroundColor: COLORS.primary,
+    borderRadius: RADII.md,
+    paddingVertical: SPACING.lg,
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: COLORS.primary,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 4,
+  },
+  nextButtonDisabled: {
+    opacity: 0.7,
+  },
+  nextButtonText: {
+    color: COLORS.white,
+    fontSize: 16,
+    fontWeight: '600',
+    marginRight: SPACING.sm,
+  },
 });

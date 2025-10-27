@@ -1,4 +1,4 @@
-// src/screens/laptopscreens/MyLaptopAdsListScreen.tsx
+﻿// src/screens/laptopscreens/MyLaptopAdsListScreen.tsx
 import React, { useEffect, useMemo, useState, useCallback } from 'react';
 import {
   View,
@@ -33,7 +33,7 @@ const INR = (v: number) => {
       maximumFractionDigits: 0,
     }).format(v || 0);
   } catch {
-    return `₹${Math.round((v || 0)).toLocaleString('en-IN')}`;
+    return `â‚¹${Math.round((v || 0)).toLocaleString('en-IN')}`;
   }
 };
 
@@ -144,7 +144,7 @@ const MyLaptopAdsListScreen: React.FC = () => {
   const renderCard = ({ item }: { item: LaptopItem }) => {
     const titleText =
       [item.brand, item.model].filter(Boolean).join(' ') || `Laptop #${item.id}`;
-    const subtitleText = [item.brand, item.processor].filter(Boolean).join(' • ');
+    const subtitleText = [item.processor, item.ram].filter(Boolean).join(' | ');
 
     return (
       <ListingCard
@@ -249,3 +249,5 @@ const styles = StyleSheet.create({
   tabTextSelected: { color: '#fff', fontWeight: '500' },
   grid: { paddingHorizontal: 10, paddingBottom: 20 },
 });
+
+

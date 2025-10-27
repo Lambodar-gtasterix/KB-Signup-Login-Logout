@@ -195,7 +195,7 @@ const MyMobilesAdsListScreen: React.FC = () => {
         <TouchableOpacity onPress={() => navigation.goBack()}>
           <Icon name="arrow-left" size={24} color="#000" />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>My Ads</Text>
+        <Text style={styles.headerTitle}>My Mobile Ads</Text>
         <View style={{ width: 24 }} />
       </View>
 

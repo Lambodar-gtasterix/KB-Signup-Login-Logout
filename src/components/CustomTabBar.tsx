@@ -1,4 +1,4 @@
-import React from 'react';
+﻿import React from 'react';
 
 import {
 
@@ -27,6 +27,10 @@ const circleSize = width * 0.16;
 const innerCircleSize = circleSize * 0.8;
 
 export default function CustomTabBar({ state, navigation }: BottomTabBarProps) {
+
+  if (shouldHideTabBar(state)) {
+    return null;
+  }
 
   const renderTab = (route: any, index: number) => {
 
@@ -109,6 +113,45 @@ export default function CustomTabBar({ state, navigation }: BottomTabBarProps) {
 
   );
 
+}
+
+function shouldHideTabBar(state: BottomTabBarProps['state']) {
+  const activeRoute = state.routes[state.index];
+  if (!activeRoute) {
+    return false;
+  }
+
+  const routeNames = collectRouteNames(activeRoute as any);
+  const hiddenRoutes = new Set([
+    'AddMobileDetails',
+    'AddLaptopDetails',
+    'SellMobileStack',
+    'SellLaptopStack',
+    'ProductDetails',
+    'LaptopDetails',
+    'UpdateLaptop',
+    'UpdateMobile',
+  ]);
+  return routeNames.some((name) => hiddenRoutes.has(name));
+}
+
+function collectRouteNames(route: any) {
+  const names: string[] = [];
+  let current = route;
+
+  while (current) {
+    if (typeof current.name === 'string') {
+      names.push(current.name);
+    }
+
+    if (!current.state || typeof current.state.index !== 'number') {
+      break;
+    }
+
+    current = current.state.routes?.[current.state.index];
+  }
+
+  return names;
 }
 
 function getIconName(name: string) {
