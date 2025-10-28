@@ -114,7 +114,7 @@ const ConfirmLaptopDetailsScreen: React.FC = () => {
   );
 
   return (
-    <SafeAreaView style={styles.safeArea}>
+    <SafeAreaView edges={['top']} style={styles.safeArea}>
       <KeyboardAvoidingView
         style={styles.flex}
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
@@ -175,7 +175,7 @@ const ConfirmLaptopDetailsScreen: React.FC = () => {
           </ScrollView>
 
           {/* Footer */}
-          <View style={styles.footer}>
+          <SafeAreaView edges={['bottom']} style={styles.footer}>
             <TouchableOpacity
               style={[styles.postButton, loading && styles.postButtonDisabled]}
               onPress={handlePostNow}
@@ -183,7 +183,7 @@ const ConfirmLaptopDetailsScreen: React.FC = () => {
             >
               <Text style={styles.postButtonText}>{loading ? 'Loading...' : 'Post Now'}</Text>
             </TouchableOpacity>
-          </View>
+          </SafeAreaView>
         </View>
       </KeyboardAvoidingView>
     </SafeAreaView>
