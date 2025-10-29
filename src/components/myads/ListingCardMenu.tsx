@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
+import { ActivityIndicator, View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 
 export type ListingCardMenuProps = {
@@ -7,9 +7,25 @@ export type ListingCardMenuProps = {
   statusLabel?: string;
   onEdit: () => void;
   onDelete: () => void;
+  editLabel?: string;
+  deleteLabel?: string;
+  isDeleting?: boolean;
+  disabled?: boolean;
 };
 
-const ListingCardMenu: React.FC<ListingCardMenuProps> = ({ title, statusLabel, onEdit, onDelete }) => {
+const ListingCardMenu: React.FC<ListingCardMenuProps> = ({
+  title,
+  statusLabel,
+  onEdit,
+  onDelete,
+  editLabel = 'Update',
+  deleteLabel = 'Delete',
+  isDeleting = false,
+  disabled = false,
+}) => {
+  const editDisabled = disabled || isDeleting;
+  const deleteDisabled = disabled || isDeleting;
+
   return (
     <View style={styles.container}>
       {/* Optional context header */}
@@ -25,20 +41,42 @@ const ListingCardMenu: React.FC<ListingCardMenuProps> = ({ title, statusLabel, o
       )}
 
       {/* Actions */}
-      <TouchableOpacity style={styles.row} onPress={onEdit} activeOpacity={0.8}>
+      <TouchableOpacity
+        style={[styles.row, editDisabled && styles.disabledRow]}
+        onPress={onEdit}
+        activeOpacity={0.8}
+        disabled={editDisabled}
+        accessibilityRole="button"
+        accessibilityLabel={`${editLabel} listing`}
+      >
         <View style={styles.iconWrap}>
           <Icon name="pencil" size={18} color="#216DBD" />
         </View>
-        <Text style={styles.rowText}>Update</Text>
+        <Text style={[styles.rowText, editDisabled && styles.disabledText]}>{editLabel}</Text>
       </TouchableOpacity>
 
       <View style={styles.divider} />
 
-      <TouchableOpacity style={styles.row} onPress={onDelete} activeOpacity={0.8}>
-        <View style={[styles.iconWrap, { backgroundColor: '#FFE9E9' }]}>
-          <Icon name="trash-can-outline" size={18} color="#D93025" />
+      <TouchableOpacity
+        style={[styles.row, deleteDisabled && styles.disabledRow]}
+        onPress={onDelete}
+        activeOpacity={0.8}
+        disabled={deleteDisabled}
+        accessibilityRole="button"
+        accessibilityLabel={`${deleteLabel} listing`}
+      >
+        <View style={[styles.iconWrap, styles.deleteIconWrap, isDeleting && styles.deleteIconBusy]}>
+          {isDeleting ? (
+            <ActivityIndicator size="small" color="#D93025" />
+          ) : (
+            <Icon name="trash-can-outline" size={18} color="#D93025" />
+          )}
         </View>
-        <Text style={[styles.rowText, { color: '#D93025' }]}>Delete</Text>
+        <Text
+          style={[styles.rowText, styles.deleteText, deleteDisabled && styles.disabledDeleteText]}
+        >
+          {deleteLabel}
+        </Text>
       </TouchableOpacity>
     </View>
   );
@@ -70,4 +108,10 @@ const styles = StyleSheet.create({
   },
   rowText: { fontSize: 15, color: '#111' },
   divider: { height: 1, backgroundColor: '#EFEFEF' },
+  disabledRow: { opacity: 0.6 },
+  disabledText: { color: '#9AA4AF' },
+  deleteIconWrap: { backgroundColor: '#FFE9E9' },
+  deleteIconBusy: { justifyContent: 'center', alignItems: 'center' },
+  deleteText: { color: '#D93025' },
+  disabledDeleteText: { color: '#F5A3A0' },
 });

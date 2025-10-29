@@ -1,18 +1,6 @@
-﻿// src/screens/laptopscreens/MyLaptopAdsListScreen.tsx
-import React, { useEffect, useMemo, useState, useCallback } from 'react';
-import {
-  View,
-  Text,
-  StyleSheet,
-  FlatList,
-  TouchableOpacity,
-  ActivityIndicator,
-  RefreshControl,
-  Alert,
-  ImageSourcePropType,
-} from 'react-native';
-import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
-import { useNavigation, useFocusEffect } from '@react-navigation/native';
+import React, { useCallback, useEffect, useState } from 'react';
+import { Alert, ImageSourcePropType } from 'react-native';
+import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 
 import { MyLaptopAdsStackParamList } from '../../navigation/MyLaptopAdsStack';
@@ -21,43 +9,33 @@ import { deleteLaptop } from '../../api/LaptopsApi/deleteLaptop';
 
 import ListingCard from '../../components/myads/ListingCard';
 import ListingCardMenu from '../../components/myads/ListingCardMenu';
-import BottomSheet from '../../components/myads/BottomSheet';
+import MyAdsListLayout from '../MyAds/common/MyAdsListLayout';
+import { useMyAdsStatusFilter } from '../../hooks/useMyAdsStatusFilter';
+import { formatINR } from '../../utils/formatCurrency';
 
 type NavigationProp = NativeStackNavigationProp<MyLaptopAdsStackParamList>;
-
-const INR = (v: number) => {
-  try {
-    return new Intl.NumberFormat('en-IN', {
-      style: 'currency',
-      currency: 'INR',
-      maximumFractionDigits: 0,
-    }).format(v || 0);
-  } catch {
-    return `â‚¹${Math.round((v || 0)).toLocaleString('en-IN')}`;
-  }
-};
-
-const TABS = ['Live', 'Upcoming', 'Completed'] as const;
-type Tab = typeof TABS[number];
 
 const MyLaptopAdsListScreen: React.FC = () => {
   const navigation = useNavigation<NavigationProp>();
 
-  const [selectedTab, setSelectedTab] = useState<Tab>('Live');
   const [laptops, setLaptops] = useState<LaptopItem[]>([]);
   const [loading, setLoading] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
 
-  // menu
   const [menuOpen, setMenuOpen] = useState(false);
   const [selectedLaptop, setSelectedLaptop] = useState<LaptopItem | null>(null);
   const [deleting, setDeleting] = useState(false);
+
+  const { selectedTab, setSelectedTab, filtered } = useMyAdsStatusFilter({
+    items: laptops,
+    getStatus: (item) => item.status,
+  });
 
   const fetchData = async () => {
     if (loading) return;
     setLoading(true);
     try {
-      const data = await getAllLaptops(); // plain array
+      const data = await getAllLaptops();
       setLaptops(data);
     } catch (e) {
       console.warn('getAllLaptops error:', e);
@@ -68,12 +46,13 @@ const MyLaptopAdsListScreen: React.FC = () => {
 
   useEffect(() => {
     fetchData();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // refetch when screen regains focus (after update/delete)
   useFocusEffect(
     useCallback(() => {
       fetchData();
+      // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [])
   );
 
@@ -83,17 +62,11 @@ const MyLaptopAdsListScreen: React.FC = () => {
     setRefreshing(false);
   };
 
-  const filtered = useMemo(() => {
-    if (selectedTab === 'Live') return laptops.filter((l) => l.status === 'ACTIVE');
-    if (selectedTab === 'Completed') return laptops.filter((l) => l.status === 'SOLD');
-    // Upcoming = anything not ACTIVE/SOLD (adjust as your business rules)
-    return laptops.filter((l) => l.status && l.status !== 'ACTIVE' && l.status !== 'SOLD');
-  }, [laptops, selectedTab]);
-
   const openMenuFor = (l: LaptopItem) => {
     setSelectedLaptop(l);
     setMenuOpen(true);
   };
+
   const closeMenu = () => {
     setMenuOpen(false);
     setSelectedLaptop(null);
@@ -101,7 +74,7 @@ const MyLaptopAdsListScreen: React.FC = () => {
 
   const handleEdit = () => {
     if (!selectedLaptop) return;
-    (navigation as any).navigate('UpdateLaptop', { laptopId: selectedLaptop.id }); // backend uses "id"
+    (navigation as any).navigate('UpdateLaptop', { laptopId: selectedLaptop.id });
     closeMenu();
   };
 
@@ -119,7 +92,7 @@ const MyLaptopAdsListScreen: React.FC = () => {
           onPress: async () => {
             try {
               setDeleting(true);
-              await deleteLaptop(selectedLaptop.id); // pass the numeric id
+              await deleteLaptop(selectedLaptop.id);
               await fetchData();
               Alert.alert('Deleted', 'Laptop soft-deleted');
             } catch (e: any) {
@@ -138,7 +111,7 @@ const MyLaptopAdsListScreen: React.FC = () => {
   const resolveImage = (item: LaptopItem): ImageSourcePropType => {
     const url = item.laptopPhotos?.[0]?.photo_link ?? '';
     if (url) return { uri: url };
-    return require('../../assets/icons/Hyundai.png'); // fallback placeholder
+    return require('../../assets/icons/Hyundai.png');
   };
 
   const renderCard = ({ item }: { item: LaptopItem }) => {
@@ -149,7 +122,7 @@ const MyLaptopAdsListScreen: React.FC = () => {
     return (
       <ListingCard
         image={resolveImage(item)}
-        priceText={INR(item.price || 0)}
+        priceText={formatINR(item.price || 0)}
         title={titleText}
         subtitle={subtitleText}
         location="Pune"
@@ -161,60 +134,22 @@ const MyLaptopAdsListScreen: React.FC = () => {
   };
 
   return (
-    <View style={styles.container}>
-      {/* Header (kept consistent) */}
-      <View style={styles.header}>
-        <TouchableOpacity onPress={() => navigation.goBack()}>
-          <Icon name="arrow-left" size={24} color="#000" />
-        </TouchableOpacity>
-        <Text style={styles.headerTitle}>My Laptop Ads</Text>
-        <View style={{ width: 24 }} />
-      </View>
-
-      {/* Tabs */}
-      <View style={styles.tabRow}>
-        {TABS.map((tab) => {
-          const isSelected = selectedTab === tab;
-          return (
-            <TouchableOpacity
-              key={tab}
-              style={[styles.tab, isSelected && styles.tabSelected]}
-              onPress={() => setSelectedTab(tab)}
-            >
-              <Text style={[styles.tabText, isSelected && styles.tabTextSelected]}>
-                {tab} Laptops
-              </Text>
-            </TouchableOpacity>
-          );
-        })}
-      </View>
-
-      {/* Grid */}
-      {loading && laptops.length === 0 ? (
-        <View style={{ paddingTop: 40 }}>
-          <ActivityIndicator />
-        </View>
-      ) : (
-        <FlatList
-          data={filtered}
-          keyExtractor={(item) => String(item.id)}   // backend id
-          renderItem={renderCard}
-          numColumns={2}
-          contentContainerStyle={styles.grid}
-          showsVerticalScrollIndicator={false}
-          refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
-          ListEmptyComponent={
-            !loading ? (
-              <View style={{ padding: 24 }}>
-                <Text>No laptops found.</Text>
-              </View>
-            ) : null
-          }
-        />
-      )}
-
-      {/* 3-dot BottomSheet */}
-      <BottomSheet visible={menuOpen} onClose={closeMenu} height={0.28}>
+    <MyAdsListLayout
+      title="My Laptop Ads"
+      tabLabelSuffix="Laptops"
+      selectedTab={selectedTab}
+      onTabChange={setSelectedTab}
+      data={filtered}
+      loading={loading}
+      refreshing={refreshing}
+      onRefresh={onRefresh}
+      renderItem={renderCard}
+      keyExtractor={(item) => String(item.id)}
+      emptyMessage="No laptops found."
+      onBack={() => navigation.goBack()}
+      menuVisible={menuOpen}
+      onCloseMenu={closeMenu}
+      menuContent={
         <ListingCardMenu
           title={
             selectedLaptop
@@ -224,30 +159,13 @@ const MyLaptopAdsListScreen: React.FC = () => {
           statusLabel={selectedLaptop?.status as string | undefined}
           onEdit={handleEdit}
           onDelete={handleDelete}
+          isDeleting={deleting}
+          disabled={deleting}
         />
-      </BottomSheet>
-    </View>
+      }
+      isInitialLoading={loading && laptops.length === 0}
+    />
   );
 };
 
 export default MyLaptopAdsListScreen;
-
-const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#fff', paddingTop: 50 },
-  header: {
-    flexDirection: 'row',
-    paddingHorizontal: 20,
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 10,
-  },
-  headerTitle: { fontSize: 18, fontWeight: '600', color: '#000' },
-  tabRow: { flexDirection: 'row', justifyContent: 'center', gap: 10, paddingVertical: 12 },
-  tab: { paddingVertical: 8, paddingHorizontal: 16, borderRadius: 20, backgroundColor: '#F0F0F0' },
-  tabSelected: { backgroundColor: '#216DBD' },
-  tabText: { color: '#333', fontSize: 13 },
-  tabTextSelected: { color: '#fff', fontWeight: '500' },
-  grid: { paddingHorizontal: 10, paddingBottom: 20 },
-});
-
-

@@ -148,7 +148,9 @@ async function uploadSingleImage(
     // Retry on network errors
     if (isNetworkError && retryCount < MAX_RETRIES) {
       console.log(`[UPLOAD RETRY] ${file.name} - Retry ${retryCount + 1}/${MAX_RETRIES}`);
-      await new Promise(resolve => setTimeout(resolve, 1000 * (retryCount + 1))); // Exponential backoff
+      await new Promise<void>((resolve) =>
+        setTimeout(() => resolve(), 1000 * (retryCount + 1)),
+      ); // Exponential backoff
       return uploadSingleImage(laptopId, file, retryCount + 1);
     }
 

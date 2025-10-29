@@ -3249,6 +3249,7 @@ __metadata:
   resolution: "Demo@workspace:."
   dependencies:
     "@babel/core": ^7.25.2
+    "@babel/plugin-transform-export-namespace-from": ^7.27.1
     "@babel/preset-env": ^7.25.3
     "@babel/runtime": ^7.25.0
     "@react-native-async-storage/async-storage": ^2.2.0
@@ -3291,6 +3292,7 @@ __metadata:
     react-test-renderer: 19.1.0
     socket.io: ^4.8.1
     typescript: 5.0.4
+    zod: ^4.1.12
   languageName: unknown
   linkType: soft
 
@@ -10433,5 +10435,12 @@ __metadata:
   version: 0.1.0
   resolution: "yocto-queue@npm:0.1.0"
   checksum: f77b3d8d00310def622123df93d4ee654fc6a0096182af8bd60679ddcdfb3474c56c6c7190817c84a2785648cdee9d721c0154eb45698c62176c322fb46fc700
+  languageName: node
+  linkType: hard
+
+"zod@npm:^4.1.12":
+  version: 4.1.12
+  resolution: "zod@npm:4.1.12"
+  checksum: 91174acc7d2ca5572ad522643474ddd60640cf6877b5d76e5d583eb25e3c4072c6f5eb92ab94f231ec5ce61c6acdfc3e0166de45fb1005b1ea54986b026b765f
   languageName: node
   linkType: hard
